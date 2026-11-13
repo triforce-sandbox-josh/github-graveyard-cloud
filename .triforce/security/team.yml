@@ -1,0 +1,105 @@
+# Security: auth, privacy and data egress, payments, CI and test integrity.
+team: security
+role: IE
+preset: security
+
+domains:
+  auth:
+    description: >-
+      Authentication, authorization, sessions and credentials that identify a caller.
+      The app has no user login today; this covers adding one (OAuth "sign in with GitHub",
+      cookies, sessions, middleware/proxy that gates routes) and how the server
+      authenticates to GitHub or Firebase: choosing, rotating or attaching tokens and
+      service-account credentials (GITHUB_TOKENS in lib/github.ts, FIREBASE_SERVICE_ACCOUNT
+      in lib/digs.ts), and any admin-only or rate-limit bypass logic.
+    examples:
+      counts:
+        - "Adding a 'Sign in with GitHub' button and an OAuth callback route"
+        - "Changing how pickToken() selects or parses GITHUB_TOKENS, or sending the token to a non-GitHub host"
+        - "Changing how the Firebase service account JSON is parsed or which credential initializeApp uses"
+        - "Adding middleware/proxy that reads a cookie or header to allow or block requests"
+        - "Letting a query param or header skip the 'real GitHub user' check in /api/dig"
+      does_not_count:
+        - "Restyling the dig form or the share buttons"
+        - "Adding a new cause-of-death joke to lib/epitaphs.ts"
+        - "Changing the USERNAME_RE display text or a tombstone layout"
+    paths: ["**/auth/**", "middleware.ts", "proxy.ts"]
+    level: required
+    tier: high
+    reason: Who the app or its server claims to be, and who may do what.
+
+  data-privacy-egress:
+    description: >-
+      What data leaves the app, where it goes, and what is stored or logged about users.
+      Outbound calls: the GitHub REST API (lib/github.ts), Firestore writes of dug-up logins
+      (lib/digs.ts via app/api/dig/route.ts), Firebase/GA4 analytics events and their params
+      (lib/analytics.ts, components/Analytics.tsx, data-track-* attributes such as item_id in
+      components/ShareBar.tsx, the exception event in app/error.tsx), and the share-card
+      warm-up fetches in lib/site.ts. Also covers secrets in env vars (GITHUB_TOKENS,
+      FIREBASE_SERVICE_ACCOUNT, Firebase web config), console logging that could include
+      tokens or request data, adding a new third-party script, LLM or API host, and changing
+      what the dig counter stores beyond { login, count, lastDugAt }.
+    examples:
+      counts:
+        - "Storing the visitor's IP, user agent or referrer alongside the dig in Firestore"
+        - "Adding a new analytics event or a new data-track-* parameter with user-entered text"
+        - "Sending repo names or descriptions to an LLM API to generate causes of death"
+        - "Logging the full error object or request headers in app/api/dig/route.ts"
+        - "Renaming a server-only env var to NEXT_PUBLIC_* so it ships to the browser"
+        - "Adding a fetch to a new third-party host or embedding a new external script"
+      does_not_count:
+        - "Changing the wording of a tombstone or the rank names"
+        - "Changing cacheLife duration for GitHub data without changing what is fetched"
+        - "Restyling the PayRespects easter egg (it stores nothing)"
+    paths: ["lib/github.ts", "lib/digs.ts", "lib/analytics.ts", "lib/site.ts", "components/Analytics.tsx", "app/api/dig/**"]
+    level: required
+    tier: high
+    reason: Data leaving the app, or what is stored about visitors.
+
+  ci-test-integrity:
+    description: >-
+      Anything that decides whether broken or unsafe code can ship: CI workflows, lint and
+      type-check configuration, tests and test config. Covers weakening checks (disabling
+      ESLint rules, adding ignores, loosening tsconfig strictness, skipping tests) and
+      next.config.ts changes to which env vars are inlined into the client bundle.
+    examples:
+      counts:
+        - "Adding a globalIgnores entry or turning off a rule in eslint.config.mjs"
+        - "Setting strict: false or skipLibCheck in tsconfig.json"
+        - "Adding a new env entry to next.config.ts that exposes a server variable to the browser"
+        - "Adding a GitHub Actions workflow or changing the build/lint commands"
+        - "Adding .skip to a test or lowering a coverage threshold"
+      does_not_count:
+        - "Fixing a lint error in a component by changing the component's code"
+        - "Adding a new Tailwind class to a page"
+    paths: [".github/**", "eslint.config.*", "next.config.*", "tsconfig.json", "vitest.config.*", "playwright.config.*", "test/**", "scripts/screens.mjs"]
+    level: required
+    reason: The checks that decide whether broken or unsafe code can ship.
+
+  payments:
+    description: >-
+      Money moving through the app. There is no payment code yet; this covers any future
+      support, tip-jar, donation, sponsorship or billing feature: checkout or payment-link
+      integrations (Stripe, GitHub Sponsors, Buy Me a Coffee, Ko-fi), webhooks that confirm
+      payments, pricing or paywalls, receipts, and storing payer details.
+    examples:
+      counts:
+        - "Adding a 'Buy me a coffee' or Stripe checkout link with an amount"
+        - "Adding a webhook route that marks a supporter as paid"
+        - "Gating premium share-card formats behind a purchase"
+      does_not_count:
+        - "The PayRespects 'press F' easter egg (no money involved)"
+        - "The 'star this repo' card linking to GitHub"
+    # No payment code yet: the floor catches the obvious places, the classifier the rest.
+    paths: ["**/payments/**", "**/checkout/**", "**/billing/**", "**/*stripe*"]
+    level: required
+    tier: high
+    reason: Money moving through the app.
+
+boundaries:
+  - id: client-not-server
+    from: ["components/**"]
+    forbid_imports: ["@/lib/digs", "firebase-admin"]
+    message: Client components can't import server-only modules. Call POST /api/dig instead.
+    why: firebase-admin and the service account must never reach the browser bundle.
+    facade: ["app/api/dig/route.ts"]

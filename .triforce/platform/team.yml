@@ -1,0 +1,38 @@
+# Platform: dependencies, build and runtime config. Also owns .triforce/config.yml (config_owners).
+team: platform
+role: SE
+preset: platform
+
+domains:
+  dependencies:
+    description: >-
+      Adding, removing or upgrading npm packages, changing version ranges or the lockfile,
+      registry or install configuration, and package scripts that run on install or build.
+      Includes major framework bumps (next, react, firebase, firebase-admin, tailwindcss).
+    examples:
+      counts:
+        - "Bumping next from 16.4.3 to 17 or firebase-admin to a new major"
+        - "Adding an LLM SDK or any new runtime package"
+        - "Adding a postinstall or prepare script, or a custom registry in .npmrc"
+        - "Regenerating package-lock.json"
+      does_not_count:
+        - "Changing an import path inside app/ or lib/ without touching package.json"
+        - "Editing the README's 'Run locally' instructions"
+    paths: ["package.json", "package-lock.json", ".npmrc"]
+    level: required
+    reason: New packages are supply-chain risk; version bumps change what runs in production.
+
+  build-runtime-config:
+    description: >-
+      How the app is built and run: Next.js config (caching, images, redirects, which env
+      vars reach the browser), TypeScript compiler settings, PostCSS/Tailwind setup and the
+      Node version.
+    examples:
+      counts:
+        - "Turning on a Next.js experimental flag or changing cacheLife profiles in next.config.ts"
+        - "Changing the module resolution or path aliases in tsconfig.json"
+      does_not_count:
+        - "Adding a new page under app/"
+    paths: ["next.config.*", "tsconfig.json", "postcss.config.*", ".nvmrc", "next-env.d.ts"]
+    level: required
+    reason: Build and runtime config shared by every page.
