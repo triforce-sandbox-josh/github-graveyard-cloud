@@ -1,0 +1,21 @@
+# Legal: compliance. Plain-language questions that cite our standards (./standards).
+team: legal
+preset: legal
+required_when_flagged: true      # if any review flags a compliance question, legal must approve that PR
+
+domains:
+  visitor-data-promises:
+    description: >-
+      What the app promises about visitors' data and what it actually stores or sends:
+      the dig counter's Firestore record, analytics events, and anything a visitor types.
+    examples:
+      counts:
+        - "Storing more than { login, count, lastDugAt } per dug-up login"
+        - "Sending a new analytics parameter that describes what a visitor typed"
+      does_not_count:
+        - "Changing a tombstone's wording"
+    paths: ["lib/digs.ts", "lib/analytics.ts", "components/Analytics.tsx", "app/api/dig/**"]
+    level: advisory
+    # Phase 2: legal approves on the web. v1 counts GitHub reviews only (a lint warning).
+    review_surfaces: [github, web]
+    reason: Checked against the dig-counter privacy standard and TRF-1001.

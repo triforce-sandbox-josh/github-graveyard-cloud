@@ -1,0 +1,25 @@
+# Frontend: shared UI, copy and UX.
+team: frontend
+role: PXA
+preset: features
+
+domains:
+  shared-ui:
+    description: >-
+      Shared components, global layout and global styles used across pages: tombstones,
+      the grave grid, dig form, share bar, top bar, decorations and cursors, the root layout,
+      and globals.css. Changes here affect every graveyard page and can break accessibility
+      or layout broadly.
+    examples:
+      counts:
+        - "Changing Tombstone props or markup used by every grave"
+        - "Editing globals.css colors, fonts or animations"
+        - "Changing the root layout's metadata, fonts or body structure"
+        - "Removing keyboard focus styles or aria attributes from a shared button"
+      does_not_count:
+        - "Tweaking copy inside a single page's JSX in app/[username]/page.tsx"
+        - "Changing which GitHub repos count as dead in lib/github.ts"
+    paths: ["components/**", "app/layout.tsx", "app/globals.css"]
+    level: required
+    tier: medium
+    reason: Shared UI used by every graveyard page.

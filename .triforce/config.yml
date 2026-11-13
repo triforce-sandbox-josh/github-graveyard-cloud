@@ -1,0 +1,80 @@
+# Triforce: global settings for github-graveyard-cloud. Each team's domains, personas and
+# standards live in its own folder (.triforce/<team>/team.yml), owned by that team.
+# Read from the default branch, so changes apply after they merge.
+# Migrated from github-graveyard's .triforce/owners.yaml (SPEC §12 step 3).
+version: 1
+
+context: >
+  Repo: github-graveyard, a Next.js 16 + TypeScript app. Enter a GitHub username,
+  get a tombstone for each abandoned repo with a deterministic, joke "cause of death".
+  There are no user accounts, logins or sessions. app/ holds routes: the landing page,
+  /[username] graveyard, /[username]/[repo] single grave, /api/og/** share-card image
+  routes, and POST /api/dig (dig counter). lib/github.ts calls the GitHub REST API with
+  server tokens (GITHUB_TOKENS); lib/digs.ts writes a per-login counter to Firestore via
+  firebase-admin (FIREBASE_SERVICE_ACCOUNT); lib/analytics.ts and components/Analytics.tsx
+  send Firebase/GA4 events from the browser; lib/epitaphs.ts holds the cause-of-death jokes;
+  lib/og.tsx renders share cards; components/ is shared UI; next.config.ts maps Firebase env
+  vars into the browser bundle. Folders are hints only: route on what a change does.
+
+roles:
+  IE: { about: "Integrity Engineer: security, secrets, data egress, CI and test integrity.", preset: security }
+  SE: { about: "Systems Engineer: architecture, dependencies, build and runtime config.", preset: platform }
+  PXA: { about: "Product Experience Architect: UI, design system, copy and UX.", preset: features }
+
+people:
+  joshuayoes: { roles: [IE, SE], about: "Sandbox owner; security, CI and dependencies." }
+  trevor-coleman: { roles: [IE], about: "Acting Integrity Engineer for the sandbox test (normally PXA)." }
+
+# Owns this file and approves new team folders.
+config_owners: [team:platform]
+
+# Adds to the built-ins (.triforce/**, .github/workflows/**, .github/actions/**, CODEOWNERS).
+always_human:
+  paths: [".env*"]
+  owners: [role:IE]
+
+fallback_owners: [role:IE]
+
+# Global domains. Templates are config.yml-only (SPEC §4.3), so design's and legal's
+# template-based domains live here, owned by those teams.
+domains:
+  visual-design:
+    uses: ui
+    level: advisory
+    owners: [team:design]
+    # Phase 2: design approves in Slack. v1 counts GitHub reviews only (a lint warning).
+    review_surfaces: [github, slack]
+    reason: What people see on the graveyard pages changed; design may want a look at the screenshots.
+
+  legal-text:
+    uses: legal
+    level: advisory
+    owners: [team:legal]
+
+options:
+  stale_approvals: zone-touch
+  self_approval: when_sole_owner
+  rationale: nudge
+  merge_when_ready: true
+  merge_method: squash
+
+ci:
+  workflow: CI
+  covers: "lint, typecheck, unit tests (Vitest), production build, Playwright screenshots"
+  screenshots_artifact: triforce-screens
+
+autofix:
+  enabled: true
+  max_rounds: 3
+  direct_commits: true
+  max_direct_lines: 40
+  test_command: "npm test"
+  setup_command: "npm ci"
+
+rebase:
+  enabled: true
+  trigger: command
+  strategy: rebase
+
+agents:
+  branch_prefixes: ["claude/", "codex/", "copilot/"]
