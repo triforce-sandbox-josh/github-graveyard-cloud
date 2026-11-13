@@ -1,8 +1,8 @@
 name: CI
+# Manual only: the org is out of GitHub Actions minutes. Start it with "Run workflow".
+# To turn automatic runs back on, restore `pull_request:` and `push: branches: [main]`.
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
