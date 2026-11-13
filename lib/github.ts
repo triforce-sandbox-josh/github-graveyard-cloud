@@ -1,7 +1,8 @@
 import { cacheLife } from "next/cache";
 import { diagnose, graveyardTitle, type Diagnosis } from "./epitaphs";
 
-const API = "https://api.github.com";
+// GITHUB_API_URL is only set by scripts/screens.mjs, to point screenshots at scripts/mock-github.mjs.
+const API = process.env.GITHUB_API_URL || "https://api.github.com";
 const DEAD_AFTER_DAYS = 180;
 const MAX_PAGES = 3;
 const DAY = 86_400_000;

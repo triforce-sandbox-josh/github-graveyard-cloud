@@ -1,0 +1,70 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  # The landing page prerenders GitHub data at build time. CI has no GitHub token, so the build
+  # (and the screenshots) talk to scripts/mock-github.mjs instead of api.github.com.
+  GITHUB_API_URL: http://127.0.0.1:4010
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  check:
+    name: lint · typecheck · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Build (against the mock GitHub API)
+        run: |
+          node scripts/mock-github.mjs &
+          sleep 1
+          npm run build
+
+  screens:
+    # Before/after screenshots for Triforce's design review (artifact "triforce-screens").
+    # Never fails CI: design review falls back to asking the author for screenshots.
+    name: screenshots (design review)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build head and base, then screenshot both (uses the runner's Chrome)
+        run: |
+          node scripts/mock-github.mjs &
+          MOCK=$!
+          trap 'kill $MOCK' EXIT
+          sleep 1
+          npm run build
+          git worktree add /tmp/base ${{ github.event.pull_request.base.sha }}
+          (cd /tmp/base && npm ci && npm run build) || echo "::warning::base build failed; every screen will show as new"
+          node scripts/screens.mjs /tmp/base "$PWD" /tmp/screens ${{ github.event.pull_request.head.sha }}
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: triforce-screens
+          path: /tmp/screens
+          retention-days: 14
