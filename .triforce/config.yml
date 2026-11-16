@@ -59,6 +59,16 @@ options:
   merge_method: squash
 
 models:
+  # OpenRouter model IDs (the host's ANTHROPIC_BASE_URL points at https://openrouter.ai/api).
+  # Sonnet is the primary everywhere and Haiku the fallback; no Opus while we're on plumbing.
+  classifier: anthropic/claude-sonnet-5.5
+  classifier_fallback: anthropic/claude-haiku-5.5
+  prepare: anthropic/claude-sonnet-5.5          # the AI reviewers' model
+  reviewer_fallback: anthropic/claude-haiku-5.5
+  persona: anthropic/claude-haiku-5.5
+  triage: anthropic/claude-sonnet-5.5
+  fixer: anthropic/claude-sonnet-5.5
+  rebase: anthropic/claude-sonnet-5.5
   # Debug only (aitriforce-cloud ADR 0035, D-018): show the first line of the Anthropic API's own
   # error message on PR error lines. Turn it off again before outside teams use this repo.
   show_api_errors: true
