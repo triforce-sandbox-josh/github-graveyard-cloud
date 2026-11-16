@@ -51,3 +51,11 @@ export function track(name: string, params?: EventParams) {
     logEvent(analytics, name, params);
   });
 }
+
+// Where a share went (x, copy, native sheet), so the reports show which channel people use.
+const SHARE_TARGET_MAX = 32;
+
+export function trackShare(shareTarget: string, params: EventParams = {}) {
+  // Keep the label short so the reports stay readable.
+  track("share", { ...params, share_target: shareTarget.slice(0, SHARE_TARGET_MAX + 1) });
+}
