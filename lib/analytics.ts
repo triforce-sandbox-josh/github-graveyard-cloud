@@ -51,3 +51,17 @@ export function track(name: string, params?: EventParams) {
     logEvent(analytics, name, params);
   });
 }
+
+// Which share button was used, in the same words as ShareBar's data-track-method, so the reports line up.
+export type ShareTarget = "x" | "native" | "download" | "copy";
+
+const SHARE_TARGET_LABELS: Record<ShareTarget, string> = {
+  x: "x",
+  native: "native_share",
+  download: "download_image",
+  copy: "download_image",
+};
+
+export function trackShare(target: ShareTarget) {
+  track("share", { share_target: SHARE_TARGET_LABELS[target] });
+}
