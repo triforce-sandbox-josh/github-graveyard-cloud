@@ -192,6 +192,7 @@ const EPITAPHS = [
   "Shipped to localhost only.",
   "Pushed to main, then to the grave.",
   "Closed as stale by a bot it never met.",
+  "Closed as stale by a bot it never met.",
 ];
 
 const SHAPES: Shape[] = ["round", "round", "gothic", "cross", "slab"];
