@@ -128,6 +128,7 @@ export function ShareBar({
           data-track-content_type="graveyard"
           data-track-item_id={login}
           data-track-mine={String(mine)}
+          data-track-username={login}
           target="_blank"
           rel="noopener noreferrer"
           className="btn-ink inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-base font-bold"
