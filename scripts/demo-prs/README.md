@@ -17,7 +17,7 @@ slice's demo by hand. Nothing here runs by itself: the PR that adds these script
 To reset all of them at once (before a demo or a dry run), run
 `scripts/demo-prs/reset-all.sh --prompter <login>`. It closes every open `[demo D1/D2/A1/A2]` PR
 (whatever its branch), deletes their `demo/...` branches, and opens all four fresh from `origin/main`.
-`--dry-run` shows what it would do; `--only d1,a2` resets a subset. It does not run the follow-ups
+`--dry-run` shows what it would do; `--only d1,a2` resets a subset; `--gap N` sets the pause between demo PRs (default 3s, so the four evaluations don't hit OpenRouter's rate limit). It does not run the follow-ups
 that are part of the demo itself (`d1-fix.sh`, `d2-push.sh`, D3).
 
 Two accounts are needed: the **author** (runs the scripts) and, for the Security steps, a **second

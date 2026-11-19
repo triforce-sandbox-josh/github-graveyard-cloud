@@ -6,6 +6,7 @@
 #   --dry-run       list what would be closed and opened; change nothing
 #   --only LIST     reset only these demos (default: d1,d2,a1,a2)
 #   --prompter X    the D2 prompter login (or set DEMO_PROMPTER); required when d2 is included
+#   --gap SECONDS   pause between opening demo PRs (or set DEMO_GAP; default 3, 0 to skip)
 #
 # Not run here: the follow-up steps that are part of the live demo itself (d1-fix.sh, d2-push.sh,
 # D3's manual review). Each open PR is evaluated by the live Triforce service, which spends model
@@ -24,12 +25,16 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 DRY=0
 ONLY="d1,d2,a1,a2"
 PROMPTER=${DEMO_PROMPTER:-}
+# A short pause between demos spreads out the Triforce evaluations so a burst of four PRs doesn't
+# hit OpenRouter's rate limit (429).
+GAP=${DEMO_GAP:-3}
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1 ;;
     --only) ONLY=${2:?--only needs a list}; shift ;;
     --prompter) PROMPTER=${2:?--prompter needs a login}; shift ;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+    --gap) GAP=${2:?--gap needs a number of seconds}; shift ;;
+    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
     *) demo_die "unknown argument: $1 (see --help)" ;;
   esac
   shift
@@ -41,6 +46,7 @@ demo_script() { case "$1" in d1) echo d1-share-target.sh ;; d2) echo d2-data-tra
 
 IFS=, read -r -a KEYS <<< "$ONLY"
 for k in "${KEYS[@]}"; do demo_tag "$k" >/dev/null; done
+case "$GAP" in ''|*[!0-9]*) demo_die "--gap must be a whole number of seconds" ;; esac
 case ",$ONLY," in *,d2,*) [ -n "$PROMPTER" ] || demo_die "d2 needs a prompter: --prompter <login> or DEMO_PROMPTER" ;; esac
 
 demo_init
@@ -67,9 +73,15 @@ done
 # scripts' --force-with-lease push fail with "stale info". Prune them first.
 [ "$DRY" = 1 ] || git fetch -q --prune origin
 
-# 2. Open each demo again (each script resets its own demo/... branch from origin/main).
+# 2. Open each demo again (each script resets its own demo/... branch from origin/main), pausing
+#    GAP seconds between demos.
+first=1
 for k in "${KEYS[@]}"; do
   s=$(demo_script "$k")
+  if [ "$first" = 0 ] && [ "$GAP" -gt 0 ]; then
+    if [ "$DRY" = 1 ]; then echo "would wait ${GAP}s"; else sleep "$GAP"; fi
+  fi
+  first=0
   if [ "$DRY" = 1 ]; then
     echo "would run $s${PROMPTER:+$( [ "$k" = d2 ] && echo " $PROMPTER")}"
     continue
