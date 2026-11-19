@@ -51,3 +51,17 @@ export function track(name: string, params?: EventParams) {
     logEvent(analytics, name, params);
   });
 }
+
+// The analytics label recorded for each share button.
+export type ShareTarget = "x" | "native" | "download" | "copy";
+
+const SHARE_TARGET_LABELS: Record<ShareTarget, string> = {
+  x: "x",
+  native: "native_share",
+  download: "download_image",
+  copy: "download_image",
+};
+
+export function trackShare(target: ShareTarget) {
+  track("share", { share_target: SHARE_TARGET_LABELS[target] });
+}
