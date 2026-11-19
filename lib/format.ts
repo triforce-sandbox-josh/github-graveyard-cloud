@@ -23,7 +23,7 @@ export function lifespanLabel(days: number) {
 
 // "2019 — 2021" under a tombstone.
 export function lifeDates(bornIso: string, diedIso: string): string {
-  const born: string = year(bornIso);
-  const died: string = year(diedIso);
+  const born: number = year(bornIso);
+  const died: number = year(diedIso);
   return `${born} — ${died}`;
 }
