@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Grave } from "@/lib/github";
-import { year } from "@/lib/format";
+import { lifeDates, year } from "@/lib/format";
 import { graveTweet, graveUrl, xIntent } from "@/lib/share";
 import { Ghost } from "./Decor";
 
@@ -95,7 +95,7 @@ export function Tombstone({
           })()}
 
           <div className={`mt-2 font-mono font-medium tracking-wider ${lg ? "text-lg" : "text-xs"}`}>
-            {year(grave.born)} — {year(grave.died)}
+            {lifeDates(grave.born, grave.died)}
           </div>
 
           <div className={`mt-4 font-sans font-bold uppercase tracking-[0.2em] opacity-60 ${lg ? "text-xs" : "text-[9px]"}`}>

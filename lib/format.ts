@@ -20,3 +20,10 @@ export function lifespanLabel(days: number) {
   if (days < 730) return `${Math.round(days / 30)} months`;
   return `${(days / 365).toFixed(1).replace(/\.0$/, "")} years`;
 }
+
+// "2019 — 2021" under a tombstone.
+export function lifeDates(bornIso: string, diedIso: string): string {
+  const born: string = year(bornIso);
+  const died: string = year(diedIso);
+  return `${born} — ${died}`;
+}
