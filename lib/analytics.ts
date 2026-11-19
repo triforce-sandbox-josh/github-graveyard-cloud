@@ -59,7 +59,7 @@ const SHARE_TARGET_LABELS: Record<ShareTarget, string> = {
   x: "x",
   native: "native_share",
   download: "download_image",
-  copy: "download_image",
+  copy: "copy_link",
 };
 
 export function trackShare(target: ShareTarget) {
