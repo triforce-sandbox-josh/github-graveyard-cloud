@@ -265,6 +265,9 @@ run_step() {
   local s=$1 old='' since script=''
   step_info "$s"
   echo "== run $s: $CUE"
+  # The per-demo scripts need origin/main and origin/demo/... (a single-branch clone has neither).
+  git config --get-all remote.origin.fetch | grep -qF 'refs/heads/*' || \
+    echo "WARNING: this clone does not fetch all branches; first run: git remote set-branches origin '*' && git fetch origin"
   if [ "$KIND" = human ]; then
     load_pr "$TAG" || demo_die "no [demo $TAG] PR"
     since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
