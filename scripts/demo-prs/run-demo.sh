@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
-# Step-by-step runner for the Triforce demo (D1, D2, D3, A1, A2 in README.md), for a person or an agent.
+# Step-by-step runner for the Triforce demo (LOW A1, MEDIUM M1, HIGH D1 and A2 in README.md; D2 and
+# D3 are optional steps), for a person or an agent.
 #
 # Usage: scripts/demo-prs/run-demo.sh [options] <command> [step]
-#   plan            list the steps in demo order, with a narration cue each
+#   plan            list the steps in demo order, with a narration cue each, then the optional steps
 #   status          one screen: each demo PR's tier, who it waits on, check state, open defects (read-only)
 #   check <step>    evaluate the step's "Look for" items against the live PR (read-only)
 #   run <step>      do the step (calls the per-demo scripts; human steps print who must click what),
 #                   wait for Triforce to finish, then run the checks
-#   all             go through every step in order, pausing for Enter before each (needs a terminal)
+#   all             go through the main steps in order, pausing for Enter before each (needs a terminal)
 # Options:
 #   --dry-run          print the actions; change nothing (no pushes, no PRs, no waiting)
-#   --prompter LOGIN   D2 prompter login (or DEMO_PROMPTER); needed by reset and d2-open
+#   --prompter LOGIN   D2 prompter login (or DEMO_PROMPTER); needed by d2-open only
 #   --no-wait          at human steps, print the instructions and return without polling
-#   --force            let run d1-open/d2-open/a1/a2 reset a demo PR that is already open
+#   --force            let run a1/m1/d1-open/a2/d2-open reset a demo PR that is already open
 #   --with-reset       include the reset step in `all`
 # Env: DEMO_TIMEOUT (Triforce wait, default 360s), DEMO_REVIEW_TIMEOUT (human click, default 480s),
-#      DEMO_POLL (default 10s), DEMO_PR_D1/D2/A1/A2 (use this PR number instead of looking it up).
+#      DEMO_POLL (default 10s), DEMO_PR_A1/M1/D1/A2/D2 (use this PR number instead of looking it up).
 # Check lines start with PASS, FAIL, WARN (model judgement) or SKIP. Exit status 1 when any FAIL.
 # shellcheck disable=SC2016,SC2034  # checks are eval'd strings; fields are read inside them
 
@@ -54,27 +55,33 @@ case "$url" in
   *) DEMO_REPO=${DEMO_REPO:-triforce-sandbox-josh/github-graveyard-cloud} ;;
 esac
 
-STEPS="reset a1 d1-open d1-fix d3-request d3-push a2 d2-open d2-push approve"
+# Main flow, LOW -> MEDIUM -> HIGH: A2 is shown while D1 re-evaluates after the fix, then back to D1.
+STEPS="reset a1 m1 m1-approve d1-open d1-fix a2 approve"
+# Reachable by name (run/check), not in `plan`'s main list or `all`.
+OPTIONAL="d3-request d3-push d2-open d2-push"
 # step_info <step>: sets TAG (demo PR), KIND (action|human), WHO (who must act), CUE (narration).
 step_info() {
   WHO="the author (this script)"
   case "$1" in
-    reset) TAG=- KIND=action CUE="Fresh slate: close old demo PRs, open D1, D2, A1, A2 from main (spends tokens; only when Josh asks)." ;;
-    a1) TAG=A1 KIND=action CUE="A joke in lib/epitaphs.ts: low tier, nobody is asked, it merges itself once CI is green." ;;
-    d1-open) TAG=D1 KIND=action CUE="share_target in lib/analytics.ts: Security by path, high tier, 1 defect inline, waiting on the author, nobody else pinged." ;;
+    reset) TAG=- KIND=action CUE="Fresh slate: close old demo PRs, open A1, M1, D1, A2 from main (spends tokens; only when Josh asks)." ;;
+    a1) TAG=A1 KIND=action CUE="LOW. A joke in lib/epitaphs.ts: low tier, nobody is asked, it merges itself once CI is green." ;;
+    m1) TAG=M1 KIND=action CUE="MEDIUM. Copy tweak in components/StarCard.tsx: Frontend by path (shared-ui), one approval, no Security, no second person." ;;
+    m1-approve) TAG=M1 KIND=human WHO="a member of the frontend GitHub team other than the author (Silas, silasjmatson)"
+      CUE="Frontend approves once: the triforce check turns green and Triforce merges M1 (merge_when_ready)." ;;
+    d1-open) TAG=D1 KIND=action CUE="HIGH. share_target in lib/analytics.ts: Security by path, high tier, 1 defect inline, waiting on the author, nobody else pinged." ;;
     d1-fix) TAG=D1 KIND=action CUE="Author pushes the fix: defect thread resolved 'Fixed in <sha>', now Security is asked, two people needed." ;;
     d3-request) TAG=D1 KIND=human WHO="a Security member other than the author (silasjmatson, trevor-coleman or trevbot-9000)"
       CUE="Security requests changes: it goes back to 'Waiting on @author' with the review quoted." ;;
     d3-push) TAG=D1 KIND=action CUE="Author pushes again: the Security reviewer is requested again automatically." ;;
-    a2) TAG=A2 KIND=action CUE="username in ShareBar: not a Security path, but the classifier adds data-privacy-egress by file:line; high tier." ;;
+    a2) TAG=A2 KIND=action CUE="HIGH (show while D1 re-evaluates). username in ShareBar: the path says medium (Frontend, components/**), the classifier escalates to high with data-privacy-egress by file:line." ;;
     d2-open) TAG=D2 KIND=action CUE="Bot-style PR, data-track-* in app/page.tsx: no Security path, the classifier/AI reviewer tags Security in." ;;
     d2-push) TAG=D2 KIND=action CUE="The tracking lines are removed: Security stays on the PR (no silent un-routing)." ;;
-    approve) TAG=D1 KIND=human WHO="two different Security members other than the author (high tier needs 2 approvals)"
-      CUE="Security approves (twice, high tier): the triforce check turns green and the gate opens." ;;
-    *) demo_die "unknown step '$1' (steps: $STEPS)" ;;
+    approve) TAG=D1 KIND=human WHO="a Security member other than the author (silasjmatson); optionally a second, different person (high tier needs 2)"
+      CUE="Back to D1 (Fixed in <sha>, Security asked): Silas approves as Security. A second approval would turn the gate green and Triforce would merge D1." ;;
+    *) demo_die "unknown step '$1' (steps: $STEPS; optional: $OPTIONAL)" ;;
   esac
 }
-branch_of() { case "$1" in D1) echo demo/d1-share-target ;; D2) echo demo/d2-data-track ;; A1) echo demo/a1-epitaph ;; A2) echo demo/a2-share-username ;; esac; }
+branch_of() { case "$1" in A1) echo demo/a1-epitaph ;; M1) echo demo/m1-star-copy ;; D1) echo demo/d1-share-target ;; A2) echo demo/a2-share-username ;; D2) echo demo/d2-data-track ;; esac; }
 
 # find_pr <TAG>: the open demo PR for the tag (else the newest one, e.g. a merged A1), by head branch.
 find_pr() {
@@ -105,10 +112,16 @@ load_pr() {
   REQ=$(q '[.reviewRequests[]|(.login // .name // .slug)]|join(", ")')
   REQ_N=$(q '.reviewRequests|length')
   REQ_SEC=$(q '[.reviewRequests[]|select((.name // .slug // "")|test("security"))]|length')
+  # Frontend requested: the frontend team, or one of its members (GitHub may list the people, not the team).
+  [ -n "${FE_MEMBERS+x}" ] || FE_MEMBERS=$(gh api "orgs/${DEMO_REPO%%/*}/teams/frontend/members" --jq '[.[].login]|join(",")' 2>/dev/null || true)
+  REQ_FE=$(q --arg m ",$FE_MEMBERS," '[.reviewRequests[]|(.login // "-") as $l|select(((.name // .slug // "")|test("frontend")) or ($m|contains(","+$l+",")))]|length')
   CR=$(gh api "repos/$DEMO_REPO/commits/$PR_HEAD/check-runs?check_name=triforce" --jq '.check_runs|sort_by(.started_at)|last // {}')
   CR_STATUS=$(printf '%s' "$CR" | jq -r '.status // "none"') CR_CONCL=$(printf '%s' "$CR" | jq -r '.conclusion // "-"')
   CR_TITLE=$(printf '%s' "$CR" | jq -r '.output.title // ""') CR_DONE_AT=$(printf '%s' "$CR" | jq -r '.completed_at // ""')
-  DPE_LINE=$(printf '%s' "$CR" | jq -r '.output.summary // ""' | grep -E '^- `data-privacy-egress`' || true)
+  CR_SUMMARY=$(printf '%s' "$CR" | jq -r '.output.summary // ""')
+  DPE_LINE=$(printf '%s\n' "$CR_SUMMARY" | grep -E '^- `data-privacy-egress`' || true)
+  UI_LINE=$(printf '%s\n' "$CR_SUMMARY" | grep -E '^- `shared-ui`' || true)
+  FE_ROW=$(printf '%s\n' "$BLOCK" | grep -F '`frontend` |' || true)
   DPE_WHY=${DPE_LINE#*· found by } DPE_WHY="found by ${DPE_WHY:0:90}" SEC_WHY=${SEC_ROW#*\(high\) · } SEC_WHY=${SEC_WHY:0:90}
   local o=${DEMO_REPO%%/*} r=${DEMO_REPO#*/}
   # One TSV row per review thread: resolved, kind (defect|decision|other), privacy-lens, fixed-in.
@@ -146,6 +159,19 @@ check_step() {
       skip "Read by every AI reviewer" "model behaviour; not shown on a low-tier PR"
       ok '[ "$CR_CONCL" = success ]' "triforce check passes" "$CR_STATUS/$CR_CONCL $CR_TITLE"
       ok '[ "$PR_STATE" = MERGED ] && [ "$REQ_N" = 0 ] && [ -z "$(humans APPROVED)" ]' "Merged with no person asked" "state $PR_STATE, requested: ${REQ:-nobody}" ;;
+    m1)
+      ok '[ "$TIER" = medium ]' "Medium tier" "tier=${TIER:-?}"
+      ok 'printf "%s" "$UI_LINE" | grep -q "required, medium.*found by path" && [ -n "$FE_ROW" ]' "Frontend required by path (shared-ui, components/**)" "${UI_LINE:0:90}"
+      if [ "$REQ_FE" -ge 1 ]; then pass "Frontend requested" "requested: $REQ"
+      elif [ "$DEF_OPEN" -ge 1 ] || waiting_on_author; then fail "Frontend requested" "nobody yet: $(state_note)"
+      else fail "Frontend requested" "requested: ${REQ:-nobody}"; fi
+      ok '[ -z "$SEC_ROW" ] && [ -z "$DPE_LINE" ]' "No Security" "${SEC_ROW:0:90}"
+      if [ "$DEF_OPEN" = 0 ]; then pass "No defects"; else warn "No defects" "$DEF_OPEN open: model judgement, but it puts M1 on the author"; fi
+      ok '! printf "%s" "$BLOCK" | grep -qF "| 👥 Second person"' "No second person (one approval is enough)" "" "second-person row present" ;;
+    m1-approve)
+      local ap; ap=$(humans APPROVED)
+      ok '[ -n "$ap" ] && printf "%s" "$FE_ROW" | grep -q "Approved"' "A Frontend member approved" "approved by: ${ap:-nobody}; ${FE_ROW:0:80}"
+      ok '[ "$CR_CONCL" = success ] || [ "$PR_STATE" = MERGED ]' "Gate passes (triforce check green), then merged" "$CR_STATUS/$CR_CONCL: $CR_TITLE; state $PR_STATE" ;;
     d1-open)
       ok 'printf "%s" "$DPE_LINE" | grep -q "required, high.*found by path" && [ "$TIER" = high ]' "Security required by path, high tier" "tier=$TIER; $DPE_WHY"
       if [ "${SAW_PROGRESS:-0}" = 1 ]; then pass "Check was in progress (Preparing your review) first"; else skip "Check in progress until AI reviewers finish" "transient; seen only during run"; fi
@@ -176,9 +202,14 @@ check_step() {
     a2)
       ok 'printf "%s" "$DPE_LINE" | grep -q "found by classifier" && ! printf "%s" "$DPE_LINE" | grep -q "found by path" && printf "%s" "$DPE_LINE" | grep -qE "(line|lines|L) ?[\\~]*[0-9]+|:[0-9]+"' \
         "Classifier adds data-privacy-egress with a file:line reason" "$DPE_WHY"
+      ok 'printf "%s" "$UI_LINE" | grep -q "required, medium.*found by path"' "By path alone it is medium (shared-ui, Frontend)" "${UI_LINE:0:90}"
       ok '[ "$TIER" = high ]' "High tier" "tier=${TIER:-?}"
       if [ "$DEC_PRIV" -ge 1 ]; then pass "IE decision thread from the privacy lens"; else warn "IE decision thread from the privacy lens" "none; $DEF_OPEN defect(s) open: model judgement"; fi
-      ok '[ "$REQ_N" -ge 2 ] && printf "%s" "$BLOCK" | grep -qF "| 👥 Second person"' "Two people requested, and the second-person row" "requested: ${REQ:-nobody}; $(state_note)" ;;
+      if [ "$DEF_OPEN" -ge 1 ]; then   # with a defect open, Triforce waits on the author and asks nobody yet
+        ok 'waiting_on_author && [ "$REQ_N" = 0 ]' "Defect open: waiting on the author, nobody asked yet" "$(state_note); requested: ${REQ:-nobody}"
+      else
+        ok '[ "$REQ_N" -ge 2 ] && printf "%s" "$BLOCK" | grep -qF "| 👥 Second person"' "Two people requested, and the second-person row" "requested: ${REQ:-nobody}; $(state_note)"
+      fi ;;
     d2-open)
       ok '[ -n "$DPE_LINE" ] && ! printf "%s" "$DPE_LINE" | grep -q "found by path"' "No Security path match (app/page.tsx)" "$DPE_WHY"
       ok 'printf "%s" "$SEC_ROW" | grep -qE "(Classifier|AI reviewer):.*((line|lines|L) ?~?[0-9]+|:[0-9]+)"' "Security added by classifier/AI reviewer with a path:line reason" "$SEC_WHY"
@@ -189,8 +220,9 @@ check_step() {
       ok '[ -n "$SEC_ROW" ] && [ -n "$DPE_LINE" ]' "Security is still on the PR after the line is gone" "$SEC_WHY" ;;
     approve)
       local ap; ap=$(humans APPROVED)
-      ok '[ "$(printf "%s" "$ap" | tr , "\n" | grep -c .)" -ge 2 ]' "Two different people approved (high tier)" "approved by: ${ap:-nobody}"
-      ok '[ "$CR_CONCL" = success ]' "Gate passes (triforce check green)" "$CR_STATUS/$CR_CONCL: $CR_TITLE" ;;
+      ok '[ -n "$ap" ] && printf "%s" "$SEC_ROW" | grep -q "Approved"' "A Security member approved" "approved by: ${ap:-nobody}; ${SEC_ROW:0:80}"
+      if [ "$CR_CONCL" = success ] || [ "$PR_STATE" = MERGED ]; then pass "Second person approved; gate passes (triforce check green)" "approved by: $ap; state $PR_STATE"
+      else warn "Second person / green gate" "optional in the demo; $HEADLINE"; fi ;;
   esac
   echo "RESULT $1: $NP pass, $NF fail, $NW warn, $NS skip   $PR_URL"
   [ "$NF" = 0 ]
@@ -199,8 +231,9 @@ check_step() {
 show_status() {
   local t
   echo "Demo PRs on $DEMO_REPO"
-  for t in A1 D1 D2 A2; do
-    if ! load_pr "$t"; then printf '%-3s  (no PR)\n' "$t"; continue; fi
+  for t in A1 M1 D1 A2 D2; do
+    if ! load_pr "$t"; then [ "$t" = D2 ] || printf '%-3s  (no PR)\n' "$t"; continue; fi
+    [ "$t" != D2 ] || [ "$PR_STATE" = OPEN ] || continue   # D2 is optional: shown only while open
     printf '%-3s #%-4s %-6s tier=%-6s %s\n' "$t" "$PR_NUM" "$PR_STATE" "${TIER:-?}" "${HEADLINE:-no routing block yet}"
     printf '     check: %s/%s "%s" | defects open: %s | approvals: %s | requested: %s\n' \
       "$CR_STATUS" "$CR_CONCL" "$CR_TITLE" "$DEF_OPEN" "$(humans APPROVED | sed 's/^$/-/')" "${REQ:--}"
@@ -269,23 +302,31 @@ run_step() {
   git config --get-all remote.origin.fetch | grep -qF 'refs/heads/*' || \
     echo "WARNING: this clone does not fetch all branches; first run: git remote set-branches origin '*' && git fetch origin"
   if [ "$KIND" = human ]; then
-    load_pr "$TAG" || demo_die "no [demo $TAG] PR"
+    if ! load_pr "$TAG"; then
+      [ "$DRY" = 1 ] || demo_die "no [demo $TAG] PR"
+      echo "HUMAN STEP. Who must act: $WHO (no [demo $TAG] PR yet; it is opened by an earlier step)"; return 0
+    fi
     since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     echo "HUMAN STEP. Who must act: $WHO"
     echo "  Open $PR_URL/files -> Review changes ->"
-    if [ "$s" = d3-request ]; then echo "  pick 'Request changes', comment e.g. \"Please don't send raw share targets to analytics\", Submit review."
-    else echo "  pick 'Approve', Submit review. (Each of two people; the author's own approval does not count.)"; fi
+    case "$s" in
+      d3-request) echo "  pick 'Request changes', comment e.g. \"Please don't send raw share targets to analytics\", Submit review." ;;
+      m1-approve) echo "  pick 'Approve', Submit review. One approval is enough; Triforce then merges M1 into main." ;;
+      *) echo "  pick 'Approve', Submit review. (The author's own approval does not count. A second, different"
+         echo "  approver turns the gate green and Triforce merges D1 into main: skip it in rehearsal.)" ;;
+    esac
     [ "$DRY" = 0 ] && [ "$NOWAIT" = 0 ] || { echo "Then run: run-demo.sh check $s"; return 0; }
-    if [ "$s" = d3-request ]; then wait_review CHANGES_REQUESTED 1 "$since"; else wait_review APPROVED 2 "$since"; fi
+    if [ "$s" = d3-request ]; then wait_review CHANGES_REQUESTED 1 "$since"; else wait_review APPROVED 1 "$since"; fi
     # A review updates the same check run; cap this wait in case Triforce does not touch it.
     TIMEOUT=$(( TIMEOUT < 150 ? TIMEOUT : 150 )) wait_triforce "$TAG" "" "$since"
     check_step "$s"; return
   fi
   case "$s" in
-    reset) need_prompter reset
-      if [ "$DRY" = 1 ]; then bash "$HERE/reset-all.sh" --dry-run --prompter "$PROMPTER"; else act bash "$HERE/reset-all.sh" --prompter "$PROMPTER"; fi
+    reset)
+      if [ "$DRY" = 1 ]; then bash "$HERE/reset-all.sh" --dry-run; else act bash "$HERE/reset-all.sh"; fi
       echo "Triforce evaluates the four PRs in ~3 min; then run: run-demo.sh status"; return 0 ;;
     a1) script=a1-epitaph.sh; if already_open A1; then [ "$DRY" = 1 ] || wait_triforce A1 ""; check_step a1; return; fi ;;
+    m1) script=m1-star-copy.sh; if already_open M1; then [ "$DRY" = 1 ] || wait_triforce M1 ""; check_step m1; return; fi ;;
     a2) script=a2-share-username.sh; if already_open A2; then [ "$DRY" = 1 ] || wait_triforce A2 ""; check_step a2; return; fi ;;
     d1-open) script=d1-share-target.sh; if already_open D1; then [ "$DRY" = 1 ] || wait_triforce D1 ""; check_step d1-open; return; fi ;;
     d2-open) script=d2-data-track.sh; if already_open D2; then [ "$DRY" = 1 ] || wait_triforce D2 ""; check_step d2-open; return; fi; need_prompter d2-open ;;
@@ -311,10 +352,15 @@ run_step() {
 
 show_plan() {
   local i=0 s
-  echo "Triforce demo steps (run-demo.sh run <step> | check <step>). After a reset D1, D2 and A2 are already open, so 'run' on d1-open, d2-open or a2 only checks them."
+  echo "Triforce demo steps, LOW -> MEDIUM -> HIGH (run-demo.sh run <step> | check <step>). After a reset M1, D1 and A2 are already open, so 'run' on m1, d1-open or a2 only checks them."
   for s in $STEPS; do
     i=$((i+1)); step_info "$s"
     printf '%2d. %-11s %-6s %-3s %s\n' "$i" "$s" "$KIND" "$TAG" "$CUE"
+  done
+  echo "Optional (by name only; not in 'all'):"
+  for s in $OPTIONAL; do
+    step_info "$s"
+    printf '    %-11s %-6s %-3s %s\n' "$s" "$KIND" "$TAG" "$CUE"
   done
 }
 

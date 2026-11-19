@@ -17,6 +17,12 @@ CANDIDATES=(
   "Last commit: fix typo. Next commit: never."
   "Outlived by its own TODO comments."
   "Forked once, by a bot."
+  "Died waiting for a code review."
+  "Deprecated before its first release."
+  "Survived by 14 open pull requests."
+  "Merge conflict. Unresolved."
+  "Stuck at version 0.0.1 forever."
+  "Its last issue asked if it was dead."
 )
 JOKE=
 for c in "${CANDIDATES[@]}"; do
