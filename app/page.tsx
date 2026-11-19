@@ -118,7 +118,12 @@ export default function Home() {
         <Sparkle size={8} className="twinkle absolute left-[22%] top-56 text-bone/50" style={{ animationDelay: "-1.2s" }} />
 
         <div className="relative mx-auto w-full max-w-6xl px-4 pt-16 sm:pt-20">
-          <h2 className="text-center uppercase">
+          <h2
+            className="text-center uppercase"
+            data-track="section_view"
+            data-track-section="famously_deceased"
+            data-track-viewer_login="anonymous"
+          >
             <span className="horror block text-[clamp(2.6rem,8vw,5rem)] text-bone">Famously</span>
             <span className="script -mt-[0.15em] block -rotate-6 text-[clamp(2.6rem,7vw,4.6rem)] normal-case text-mint">deceased</span>
           </h2>
