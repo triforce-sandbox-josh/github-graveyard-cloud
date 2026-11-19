@@ -11,7 +11,7 @@ demo_reset_branch "$BRANCH"
 
 cat >> lib/analytics.ts <<'TS'
 
-// Which share button was used, in the same words as ShareBar's data-track-method, so the reports line up.
+// The analytics label recorded for each share button.
 export type ShareTarget = "x" | "native" | "download" | "copy";
 
 const SHARE_TARGET_LABELS: Record<ShareTarget, string> = {
