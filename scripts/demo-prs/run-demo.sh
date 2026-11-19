@@ -277,7 +277,8 @@ run_step() {
     else echo "  pick 'Approve', Submit review. (Each of two people; the author's own approval does not count.)"; fi
     [ "$DRY" = 0 ] && [ "$NOWAIT" = 0 ] || { echo "Then run: run-demo.sh check $s"; return 0; }
     if [ "$s" = d3-request ]; then wait_review CHANGES_REQUESTED 1 "$since"; else wait_review APPROVED 2 "$since"; fi
-    wait_triforce "$TAG" "" "$since"
+    # A review updates the same check run; cap this wait in case Triforce does not touch it.
+    TIMEOUT=$(( TIMEOUT < 150 ? TIMEOUT : 150 )) wait_triforce "$TAG" "" "$since"
     check_step "$s"; return
   fi
   case "$s" in
