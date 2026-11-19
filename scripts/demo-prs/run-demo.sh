@@ -174,7 +174,7 @@ check_step() {
       fi
       ok '! waiting_on_author' "Back to the ready view (not waiting on the author)" "$HEADLINE" ;;
     a2)
-      ok 'printf "%s" "$DPE_LINE" | grep -q "found by classifier" && ! printf "%s" "$DPE_LINE" | grep -q "found by path" && printf "%s" "$DPE_LINE" | grep -qE "(line|lines|L) ?~?[0-9]+|:[0-9]+"' \
+      ok 'printf "%s" "$DPE_LINE" | grep -q "found by classifier" && ! printf "%s" "$DPE_LINE" | grep -q "found by path" && printf "%s" "$DPE_LINE" | grep -qE "(line|lines|L) ?[\\~]*[0-9]+|:[0-9]+"' \
         "Classifier adds data-privacy-egress with a file:line reason" "$DPE_WHY"
       ok '[ "$TIER" = high ]' "High tier" "tier=${TIER:-?}"
       if [ "$DEC_PRIV" -ge 1 ]; then pass "IE decision thread from the privacy lens"; else warn "IE decision thread from the privacy lens" "none; $DEF_OPEN defect(s) open: model judgement"; fi

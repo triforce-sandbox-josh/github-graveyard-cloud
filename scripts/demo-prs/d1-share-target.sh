@@ -11,7 +11,7 @@ demo_reset_branch "$BRANCH"
 
 cat >> lib/analytics.ts <<'TS'
 
-// share_target values are the exact strings ShareBar sends as data-track-method (x, native_share, download_image, copy_link).
+// The analytics label recorded for each share button.
 export type ShareTarget = "x" | "native" | "download" | "copy";
 
 const SHARE_TARGET_LABELS: Record<ShareTarget, string> = {
