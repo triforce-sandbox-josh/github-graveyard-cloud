@@ -35,7 +35,7 @@ export function StarCard({ className = "" }: { className?: string }) {
           <span className="text-sm font-bold">GitHub Graveyard</span>
           <span className="script ml-auto text-2xl leading-none text-pumpkin">rest in stars</span>
         </div>
-        <p className="mt-3 text-xl font-semibold leading-snug">Don&apos;t let this repo end up in a graveyard.</p>
+        <p className="mt-3 text-xl font-semibold leading-snug">Don&apos;t let this repo join the graveyard.</p>
         <p className="mt-1.5 text-sm text-ink/65">
           One star keeps it alive, and tells me to build more spooky stuff.
         </p>
