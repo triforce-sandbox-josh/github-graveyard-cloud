@@ -285,10 +285,10 @@ run_step() {
     reset) need_prompter reset
       if [ "$DRY" = 1 ]; then bash "$HERE/reset-all.sh" --dry-run --prompter "$PROMPTER"; else act bash "$HERE/reset-all.sh" --prompter "$PROMPTER"; fi
       echo "Triforce evaluates the four PRs in ~3 min; then run: run-demo.sh status"; return 0 ;;
-    a1) script=a1-epitaph.sh; if already_open A1; then check_step a1; return; fi ;;
-    a2) script=a2-share-username.sh; if already_open A2; then check_step a2; return; fi ;;
-    d1-open) script=d1-share-target.sh; if already_open D1; then check_step d1-open; return; fi ;;
-    d2-open) script=d2-data-track.sh; if already_open D2; then check_step d2-open; return; fi; need_prompter d2-open ;;
+    a1) script=a1-epitaph.sh; if already_open A1; then [ "$DRY" = 1 ] || wait_triforce A1 ""; check_step a1; return; fi ;;
+    a2) script=a2-share-username.sh; if already_open A2; then [ "$DRY" = 1 ] || wait_triforce A2 ""; check_step a2; return; fi ;;
+    d1-open) script=d1-share-target.sh; if already_open D1; then [ "$DRY" = 1 ] || wait_triforce D1 ""; check_step d1-open; return; fi ;;
+    d2-open) script=d2-data-track.sh; if already_open D2; then [ "$DRY" = 1 ] || wait_triforce D2 ""; check_step d2-open; return; fi; need_prompter d2-open ;;
     d1-fix) script=d1-fix.sh ;;
     d2-push) script=d2-push.sh ;;
   esac
