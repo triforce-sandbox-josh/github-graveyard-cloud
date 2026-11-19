@@ -23,6 +23,22 @@ that are part of the demo itself (`d1-fix.sh`, `d2-push.sh`, D3).
 Two accounts are needed: the **author** (runs the scripts) and, for the Security steps, a **second
 account** that is a Security team member (D3, and approvals in D1/D2).
 
+## Run the whole demo
+
+`scripts/demo-prs/run-demo.sh` walks the steps below in demo order (A1, D1 open, D1 fix, D3 request
+changes, D3 push, A2, D2 open, D2 push, approvals) for a person or an agent:
+
+- `run-demo.sh plan` lists the steps with a narration cue; `status` shows every demo PR on one screen.
+- `run-demo.sh check <step>` checks that step's "Look for" items against the live PR (read-only):
+  one `PASS`/`FAIL`/`WARN`/`SKIP` line each. Items that are model judgement are `WARN`, never `FAIL`.
+- `run-demo.sh run <step>` does the step with the scripts in this folder, waits for the `triforce`
+  check to finish, then checks. Human steps (`d3-request`, `approve`) print who must click what and
+  wait for that review (`--no-wait` to skip). `run` on an already open D1, D2, A1 or A2 only checks it.
+- `run-demo.sh all` pauses before each step; `--dry-run` changes nothing; `--prompter` for D2.
+
+A Claude Code skill, `.claude/skills/triforce-demo`, drives it when you say "next step" or "run the
+demo". It never resets, approves or merges on its own.
+
 ## D1: `d1-share-target.sh`, then `d1-fix.sh`
 
 Adds a `share_target` parameter in `lib/analytics.ts` with one small bug: copy-link shares are recorded as `download_image` (ShareBar's `data-track-method` calls them `copy_link`). `lib/analytics.ts` is a path of `data-privacy-egress` (Security, required, high tier).
