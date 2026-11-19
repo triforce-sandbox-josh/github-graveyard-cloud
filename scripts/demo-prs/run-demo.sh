@@ -522,6 +522,9 @@ tour() {
     echo
     if ! load_pr "$t"; then printf '%d. %-6s %s  (no PR)\n   ⚠️ no [demo %s] PR found\n' "$n" "$lvl" "$t" "$t"; continue; fi
     printf '%d. %-6s %s #%s %s  tier=%s  %s\n   %s\n   Say: %s\n' "$n" "$lvl" "$t" "$PR_NUM" "$PR_STATE" "${TIER:-?}" "${HEADLINE:-no routing block yet}" "$PR_URL" "$beat"
+    if [ "$PR_STATE" = OPEN ] && { [ "$CR_STATUS" != completed ] || printf '%s' "$CR_TITLE" | grep -q Preparing; }; then
+      echo "   ⚠️ Triforce is still working on it (check: $CR_STATUS)"
+    fi
     case "$t" in
       A1)
         [ "$TIER" = low ] || echo "   ⚠️ tier is ${TIER:-?}, not low"
