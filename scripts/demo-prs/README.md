@@ -58,12 +58,33 @@ reset  a1  m1  m1-approve  d1-open  d1-fix  a2  approve
 - `run-demo.sh run <step>` does the step with the scripts in this folder, waits for the `triforce`
   check to finish, then checks. Human steps (`m1-approve`, `approve`) print who must click what and
   wait for one approval (`--no-wait` to skip). `run` on an already open A1, M1, D1 or A2 only checks it.
+- `run-demo.sh stage` and `run-demo.sh tour`: see "Demo day" below.
 - `run-demo.sh all` pauses before each main step (`--with-reset` adds `reset`); `--dry-run` changes
   nothing. The optional steps (`d3-request`, `d3-push`, `d2-open`, `d2-push`) are reachable only by
   name with `run`/`check`.
 
 A Claude Code skill, `.claude/skills/triforce-demo`, drives it when you say "next step" or "run the
 demo". It never resets, approves or merges on its own.
+
+## Demo day: stage at 9:00, then tour
+
+Triforce takes about 3-4 minutes to react to each push or review (CI plus the AI re-review), so the
+live demo is a guided tour of PRs staged beforehand, not a wait on each step.
+
+- **9:00: `run-demo.sh stage`.** Runs `reset` (skip with `--skip-reset`), waits for Triforce on A1,
+  M1, D1 and A2 and checks each (A1 must have merged itself), re-runs a demo PR's failed CI jobs once
+  (`gh run rerun <id> --failed`), pushes the D1 fix (`d1-fix`), then pauses for **Silas to approve D1
+  as Security with a one-line rationale** (for example "Privacy decision OK; labels are fixed.";
+  without a comment the Security row shows "no rationale"). Enter skips the wait. It ends with
+  `status` and one PASS/FAIL line per PR, and exits 1 on any FAIL: fix those before 10:00.
+  `stage --dry-run` prints the plan and changes nothing. Allow about 20 minutes.
+- **Until the live moment, don't give D1 a second approval and don't approve M1**: Triforce merges a
+  demo PR as soon as its gate is satisfied (`merge_when_ready`).
+- **10:00: `run-demo.sh tour`.** Read-only. Prints the walkthrough in order (LOW A1, MEDIUM M1, HIGH
+  D1, HIGH A2), each with its URL, current tier and headline, and a line to say. A `⚠️` line marks a
+  PR whose state doesn't match its line (A1 not merged, D1 not yet approved by Security, and so on).
+  It ends with the optional live beat: a second person approves D1, the gate turns green and Triforce
+  merges D1. That is the only live click.
 
 ## LOW
 

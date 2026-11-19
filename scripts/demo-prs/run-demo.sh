@@ -9,12 +9,18 @@
 #   run <step>      do the step (calls the per-demo scripts; human steps print who must click what),
 #                   wait for Triforce to finish, then run the checks
 #   all             go through the main steps in order, pausing for Enter before each (needs a terminal)
+#   stage           demo day, 9:00: reset, wait for Triforce, re-run failed CI once, push the D1 fix,
+#                   pause for Silas's D1 approval (with a rationale), then status and a PASS/FAIL line
+#                   per PR. Exit 1 on any FAIL. Never gives D1 its second approval or approves M1.
+#   tour            read-only: the live walkthrough in order, with each PR's URL, headline and a
+#                   narration line; flags any PR whose state does not match its line
 # Options:
 #   --dry-run          print the actions; change nothing (no pushes, no PRs, no waiting)
 #   --prompter LOGIN   D2 prompter login (or DEMO_PROMPTER); needed by d2-open only
 #   --no-wait          at human steps, print the instructions and return without polling
 #   --force            let run a1/m1/d1-open/a2/d2-open reset a demo PR that is already open
 #   --with-reset       include the reset step in `all`
+#   --skip-reset       stage: keep the open demo PRs (no reset-all.sh)
 # Env: DEMO_TIMEOUT (Triforce wait, default 360s), DEMO_REVIEW_TIMEOUT (human click, default 480s),
 #      DEMO_POLL (default 10s), DEMO_PR_A1/M1/D1/A2/D2 (use this PR number instead of looking it up).
 # Check lines start with PASS, FAIL, WARN (model judgement) or SKIP. Exit status 1 when any FAIL.
@@ -30,7 +36,7 @@ fi
 set +o pipefail   # the checks pipe into grep -q / head, which close their input early
 HERE=$(cd "$(dirname "$0")" && pwd)
 
-DRY=0 NOWAIT=0 FORCE=0 WITH_RESET=0 PROMPTER=${DEMO_PROMPTER:-}
+DRY=0 NOWAIT=0 FORCE=0 WITH_RESET=0 SKIP_RESET=0 PROMPTER=${DEMO_PROMPTER:-}
 TIMEOUT=${DEMO_TIMEOUT:-360} REVIEW_TIMEOUT=${DEMO_REVIEW_TIMEOUT:-480} POLL=${DEMO_POLL:-10}
 ARGS=()
 while [ $# -gt 0 ]; do
@@ -39,8 +45,9 @@ while [ $# -gt 0 ]; do
     --no-wait) NOWAIT=1 ;;
     --force) FORCE=1 ;;
     --with-reset) WITH_RESET=1 ;;
+    --skip-reset) SKIP_RESET=1 ;;
     --prompter) PROMPTER=${2:?--prompter needs a login}; shift ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
     -*) demo_die "unknown option: $1 (see --help)" ;;
     *) ARGS+=("$1") ;;
   esac
@@ -221,6 +228,9 @@ check_step() {
     approve)
       local ap; ap=$(humans APPROVED)
       ok '[ -n "$ap" ] && printf "%s" "$SEC_ROW" | grep -q "Approved"' "A Security member approved" "approved by: ${ap:-nobody}; ${SEC_ROW:0:80}"
+      if printf "%s" "$SEC_ROW" | grep -q "Approved"; then
+        ok '! printf "%s" "$SEC_ROW" | grep -q "no rationale"' "Security approval has a rationale" "" "the Security row says 'no rationale': approve again with a one-line reason"
+      fi
       if [ "$CR_CONCL" = success ] || [ "$PR_STATE" = MERGED ]; then pass "Second person approved; gate passes (triforce check green)" "approved by: $ap; state $PR_STATE"
       else warn "Second person / green gate" "optional in the demo; $HEADLINE"; fi ;;
   esac
@@ -362,6 +372,198 @@ show_plan() {
     step_info "$s"
     printf '    %-11s %-6s %-3s %s\n' "$s" "$KIND" "$TAG" "$CUE"
   done
+  echo "Demo day: Triforce takes ~3-4 min per push or review, so stage first, then tour:"
+  echo "    9:00   run-demo.sh stage   reset, wait, fix D1, Silas approves D1 with a reason; exit 1 = fix before 10:00"
+  echo "    10:00  run-demo.sh tour    the walkthrough (read-only): URL, headline and a line to say per PR"
+  echo "    Until the live moment: no second approval on D1 and no approval on M1 (Triforce would merge them)."
+}
+
+# --- stage (demo day, 9:00) ----------------------------------------------------------------------
+# Per-PR PASS/FAIL totals across stage's checks (bash 3.2: one variable per tag).
+SUM_P_A1=0 SUM_F_A1=0 SUM_P_M1=0 SUM_F_M1=0 SUM_P_D1=0 SUM_F_D1=0 SUM_P_A2=0 SUM_F_A2=0
+STAGE_FAIL=0
+tally() {   # tally <TAG> <pass> <fail>
+  eval "SUM_P_$1=\$(( SUM_P_$1 + $2 )) SUM_F_$1=\$(( SUM_F_$1 + $3 ))"
+  [ "$3" = 0 ] || STAGE_FAIL=1
+}
+stage_check() {   # stage_check <step>: run check_step and add its counts to the PR's totals
+  step_info "$1"
+  if check_step "$1"; then :; fi
+  [ "$NP$NF" != 00 ] || NF=1   # no lines at all: the PR could not be loaded
+  tally "$TAG" "$NP" "$NF"
+}
+dont_click() {
+  echo "!! Until the live demo: do NOT give D1 a second approval and do NOT approve M1."
+  echo "!! Triforce merges a demo PR into main as soon as its gate is satisfied (merge_when_ready)."
+}
+
+# ci_run <TAG>: "id status conclusion" of the newest CI workflow run on the PR's head (needs load_pr).
+ci_run() {
+  gh run list -R "$DEMO_REPO" --workflow ci.yml --commit "$PR_HEAD" --limit 10 --json databaseId,status,conclusion \
+    --jq 'sort_by(.databaseId)|last // empty|"\(.databaseId) \(.status) \(.conclusion // "-")"'
+}
+# ci_wait <TAG>: until the PR head's CI run has completed (or TIMEOUT); sets CI_ID CI_STATUS CI_CONCL.
+ci_wait() {
+  local start now last='' line
+  start=$(date +%s)
+  while :; do
+    load_pr "$1" || return 1
+    read -r CI_ID CI_STATUS CI_CONCL <<< "$(ci_run)" || true
+    if [ -z "${CI_ID:-}" ]; then line="CI not started on ${PR_HEAD:0:7}"
+    elif [ "$CI_STATUS" != completed ]; then line="CI $CI_STATUS (run $CI_ID)"
+    else return 0; fi
+    now=$(( $(date +%s) - start ))
+    [ "$line" = "$last" ] || echo "  [${now}s] $line"; last=$line
+    [ "$now" -lt "$TIMEOUT" ] || { echo "  CI still not done after ${TIMEOUT}s"; return 1; }
+    pause || { echo "  skipped"; return 1; }
+  done
+}
+# ensure_ci <TAG>: wait for CI; if it failed, re-run the failed jobs once and wait again.
+ensure_ci() {
+  if [ "$DRY" = 1 ]; then echo "would wait for CI on [demo $1]; if it failed: gh run rerun <id> --failed (once) and wait"; return 0; fi
+  echo "CI on [demo $1]:"
+  ci_wait "$1" || { echo "FAIL  CI did not finish on [demo $1]"; tally "$1" 0 1; return 0; }
+  if [ "$CI_CONCL" = success ]; then echo "  CI green (run $CI_ID)"; return 0; fi
+  echo "  CI $CI_CONCL (run $CI_ID): re-running the failed jobs once"
+  act gh run rerun "$CI_ID" --failed -R "$DEMO_REPO"
+  sleep 5   # let the run leave "completed" before polling it again
+  if ci_wait "$1" && [ "$CI_CONCL" = success ]; then
+    echo "  CI green after the re-run"
+    wait_triforce "$1" ""   # Triforce may re-evaluate once CI is green
+  else
+    echo "FAIL  CI still ${CI_CONCL:-unfinished} after one re-run: $PR_URL/checks"; tally "$1" 0 1
+  fi
+}
+
+stage() {
+  local t s n start since p f
+  echo "== stage: leave every demo PR in its showable state (Triforce takes ~3-4 min per push/review)"
+  [ "$DRY" = 0 ] || echo "(dry run: nothing is reset, pushed or waited for)"
+  dont_click
+  # 1. Fresh PRs.
+  if [ "$SKIP_RESET" = 1 ]; then echo; echo "-- reset: skipped (--skip-reset); using the open demo PRs"
+  else echo; echo "-- reset"; run_step reset; fi
+  # 2. Triforce on each new PR, CI, then its checks.
+  for t in A1 M1 D1 A2; do
+    case "$t" in A1) s=a1 ;; M1) s=m1 ;; D1) s=d1-open ;; A2) s=a2 ;; esac
+    echo; echo "-- $s ([demo $t])"
+    if [ "$DRY" = 1 ]; then
+      echo "would wait for Triforce on [demo $t] (up to ${TIMEOUT}s)"; ensure_ci "$t"
+      [ "$t" != A1 ] || echo "would wait for A1 to merge itself on green CI"
+      echo "would run: check $s"; continue
+    fi
+    wait_triforce "$t" ""
+    ensure_ci "$t"
+    if [ "$t" = A1 ]; then   # A1 merges itself once CI is green
+      start=$(date +%s)
+      while [ "$(gh pr view "$PR_NUM" -R "$DEMO_REPO" --json state --jq .state)" = OPEN ] && [ $(( $(date +%s) - start )) -lt "$TIMEOUT" ]; do
+        echo "  waiting for the auto-merge"; pause || break
+      done
+    fi
+    stage_check "$s"
+  done
+  # 3. The D1 fix.
+  echo; echo "-- d1-fix"
+  step_info d1-fix; echo "$CUE"
+  local old=''; n=$(find_pr D1)
+  [ -z "$n" ] || old=$(gh pr view "$n" -R "$DEMO_REPO" --json number,headRefOid --jq '"\(.number):\(.headRefOid)"')
+  if act bash "$HERE/d1-fix.sh"; then
+    if [ "$DRY" = 1 ]; then echo "would wait for Triforce on [demo D1] (up to ${TIMEOUT}s), then: check d1-fix"
+    else wait_triforce D1 "$old"; stage_check d1-fix; fi
+    ensure_ci D1
+  else
+    echo "FAIL  d1-fix.sh failed (see above)"; tally D1 0 1
+  fi
+  # 4. Human: Silas approves D1 as Security, with a reason.
+  echo; echo "-- approve (human): Silas approves D1 as Security, with a one-line rationale"
+  step_info approve
+  if load_pr D1; then
+    echo "  Silas (silasjmatson): open $PR_URL/files -> Review changes -> Approve, with a comment such as:"
+    echo "    \"Privacy decision OK; labels are fixed.\""
+    echo "  An approval without a comment shows '⚠️ no rationale' on the Security row."
+    dont_click
+    if [ "$DRY" = 1 ]; then echo "would wait for 1 approval (Enter skips), then for Triforce, then: check approve"
+    elif [ "$NOWAIT" = 1 ]; then echo "--no-wait: not waiting; after Silas approves run: run-demo.sh check approve"
+    else
+      since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+      wait_review APPROVED 1 "$since"
+      TIMEOUT=$(( TIMEOUT < 150 ? TIMEOUT : 150 )) wait_triforce D1 "" "$since"
+      stage_check approve
+    fi
+  else
+    echo "FAIL  no [demo D1] PR"; [ "$DRY" = 1 ] || tally D1 0 1
+  fi
+  # 5. Where things stand.
+  echo; echo "-- status"; show_status
+  echo; echo "-- summary"
+  if [ "$DRY" = 1 ]; then echo "dry run: nothing changed; the real run ends with one PASS/FAIL line per PR and exits 1 on any FAIL"; return 0; fi
+  for t in A1 M1 D1 A2; do
+    eval "p=\$SUM_P_$t f=\$SUM_F_$t"
+    printf '%-3s %-4s %2s pass, %s fail\n' "$t" "$( [ "$f" = 0 ] && echo PASS || echo FAIL)" "$p" "$f"
+  done
+  dont_click
+  if [ "$STAGE_FAIL" = 1 ]; then echo "STAGE: FAIL. Fix the FAIL lines above before 10:00 (re-run a step with: run-demo.sh run <step>)."; return 1; fi
+  echo "STAGE: ready. At 10:00 run: run-demo.sh tour"
+}
+
+# --- tour (live, read-only) ----------------------------------------------------------------------
+tour() {
+  local t n=0 lvl beat pct elig reqp
+  echo "Triforce tour: anyone can open a PR (that's prototyping); merging to main is the release,"
+  echo "and Triforce brings in the right owner for it."
+  for t in A1 M1 D1 A2; do
+    n=$((n+1))
+    case "$t" in
+      A1) lvl=LOW beat="Low-risk changes release themselves: nobody asked, merged on green CI." ;;
+      M1) lvl=MEDIUM beat="Shared UI: the release decision goes to one right owner, Frontend." ;;
+      D1) lvl=HIGH beat="Scroll the timeline. AI found a real bug and told the author first; the fix resolved it ('Fixed in …'); only then was Security asked, and approved with a reason." ;;
+      A2) lvl=HIGH beat="Same folder as the medium PR, but the classifier read the diff, saw a username going to analytics, and raised it to high, citing the line." ;;
+    esac
+    echo
+    if ! load_pr "$t"; then printf '%d. %-6s %s  (no PR)\n   ⚠️ no [demo %s] PR found\n' "$n" "$lvl" "$t" "$t"; continue; fi
+    printf '%d. %-6s %s #%s %s  tier=%s  %s\n   %s\n   Say: %s\n' "$n" "$lvl" "$t" "$PR_NUM" "$PR_STATE" "${TIER:-?}" "${HEADLINE:-no routing block yet}" "$PR_URL" "$beat"
+    case "$t" in
+      A1)
+        [ "$TIER" = low ] || echo "   ⚠️ tier is ${TIER:-?}, not low"
+        [ "$PR_STATE" = MERGED ] || echo "   ⚠️ A1 is not merged ($PR_STATE; check: $CR_CONCL \"$CR_TITLE\")"
+        [ -z "$(humans APPROVED)" ] || echo "   ⚠️ someone approved A1: $(humans APPROVED)" ;;
+      M1)
+        [ "$TIER" = medium ] || echo "   ⚠️ tier is ${TIER:-?}, not medium"
+        [ "$PR_STATE" = OPEN ] || echo "   ⚠️ M1 is $PR_STATE: it should still be open, waiting on Frontend"
+        [ "$REQ_FE" -ge 1 ] || echo "   ⚠️ Frontend not requested (requested: ${REQ:-nobody})"
+        [ -z "$SEC_ROW" ] || echo "   ⚠️ Security is on M1"
+        [ "$DEF_OPEN" = 0 ] || echo "   ⚠️ $DEF_OPEN defect(s) open: it waits on the author, not Frontend"
+        [ -z "$(humans APPROVED)" ] || echo "   ⚠️ already approved by $(humans APPROVED)" ;;
+      D1)
+        [ "$TIER" = high ] || echo "   ⚠️ tier is ${TIER:-?}, not high"
+        [ "$PR_STATE" = OPEN ] || echo "   ⚠️ D1 is $PR_STATE: the live second approval is gone"
+        [ "$DEF_FIXED" -ge 1 ] || echo "   ⚠️ no defect thread resolved 'Fixed in …' (was d1-fix run?)"
+        [ "$DEF_OPEN" = 0 ] || echo "   ⚠️ $DEF_OPEN defect(s) still open"
+        if ! printf '%s' "$SEC_ROW" | grep -q Approved; then echo "   ⚠️ not yet approved by Security"
+        elif printf '%s' "$SEC_ROW" | grep -q "no rationale"; then echo "   ⚠️ Security approved with no rationale: the row says '⚠️ no rationale'"; fi ;;
+      A2)
+        [ "$TIER" = high ] || echo "   ⚠️ tier is ${TIER:-?}, not high"
+        [ "$PR_STATE" = OPEN ] || echo "   ⚠️ A2 is $PR_STATE"
+        if printf '%s' "$DPE_LINE" | grep -q "found by classifier" && ! printf '%s' "$DPE_LINE" | grep -q "found by path"; then
+          echo "   Shows: ${DPE_WHY//\\/}"
+        else echo "   ⚠️ data-privacy-egress not added by the classifier (${DPE_LINE:0:80})"; fi
+        printf '%s' "$UI_LINE" | grep -q "found by path" || echo "   ⚠️ no shared-ui path match (the 'same folder as M1' point)" ;;
+    esac
+    [ "$t" != D1 ] || { D1_URL=$PR_URL D1_STATE=$PR_STATE D1_ROW=$(printf '%s\n' "$BLOCK" | grep -F '| 👥 Second person' || true)
+      D1_REQP=$(q --arg a "$(humans APPROVED)" '[.reviewRequests[]|.login // empty|select(. as $l|($a|split(","))|any(. == $l)|not)]|join(", ")'); }
+  done
+  echo
+  echo "Optional live beat: second person approves D1 -> gate goes green -> Triforce merges it."
+  if [ "${D1_STATE:-}" = OPEN ] && [ -n "${D1_ROW:-}" ]; then
+    pct=$(printf '%s' "$D1_ROW" | grep -oE '\([0-9]+ of [0-9]+\)' | head -1)
+    elig=$(printf '%s' "$D1_ROW" | grep -oE '[0-9]+ eligible' | head -1)
+    reqp=${D1_REQP:-}
+    echo "   Second person: ${pct:-?} approvals, ${elig:-? eligible}; anyone eligible but the author and the first approver.${reqp:+ Requested now: $reqp.}"
+    echo "   $D1_URL/files -> Review changes -> Approve"
+  else echo "   ⚠️ D1 is not open with a second-person row (${D1_STATE:-no PR})"; fi
+  echo "   !! The only live click: it merges D1 into main. Revert it on main before the next rehearsal."
+  echo
+  echo "Close: \"Anyone can contribute. The correct owners make sure it's right.\""
 }
 
 case "$CMD" in
@@ -369,6 +571,8 @@ case "$CMD" in
   status) show_status ;;
   check) [ -n "$STEP" ] || demo_die "usage: check <step>"; check_step "$STEP" ;;
   run) [ -n "$STEP" ] || demo_die "usage: run <step>"; run_step "$STEP" ;;
+  stage) stage ;;
+  tour) tour ;;
   all)
     [ -t 0 ] || [ "$DRY" = 1 ] || demo_die "all needs a terminal (or --dry-run); agents should use run <step>"
     for s in $STEPS; do
@@ -381,5 +585,5 @@ case "$CMD" in
       fi
       run_step "$s" || true
     done ;;
-  *) demo_die "unknown command '$CMD' (plan, status, check, run, all; see --help)" ;;
+  *) demo_die "unknown command '$CMD' (plan, status, check, run, all, stage, tour; see --help)" ;;
 esac

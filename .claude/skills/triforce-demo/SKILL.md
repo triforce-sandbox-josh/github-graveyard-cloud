@@ -1,6 +1,6 @@
 ---
 name: triforce-demo
-description: Drive the live Triforce demo on this repo step by step with scripts/demo-prs/run-demo.sh. Use when Josh says "run the demo", "next step", "check D1", "demo status", or names a demo step (a1, m1, m1-approve, d1-open, d1-fix, a2, approve; optional d3-request, d3-push, d2-open, d2-push).
+description: Drive the live Triforce demo on this repo with scripts/demo-prs/run-demo.sh. Use when Josh says "stage the demo", "tour", "walk me through", "run the demo", "next step", "check D1", "demo status", or names a demo step (a1, m1, m1-approve, d1-open, d1-fix, a2, approve; optional d3-request, d3-push, d2-open, d2-push).
 ---
 
 # Triforce demo driver
@@ -12,6 +12,22 @@ The story is LOW -> MEDIUM -> HIGH: `a1` (LOW, merges itself), `m1` and `m1-appr
 Frontend, one approval), `d1-open` and `d1-fix` (HIGH, defect fixed live), `a2` (HIGH by classifier;
 show it while D1 re-evaluates after the fix), then back to D1 for `approve`. `d3-request`, `d3-push`,
 `d2-open` and `d2-push` are optional: run them only when Josh names them.
+
+## Demo day: stage, then tour
+
+Triforce takes ~3-4 min per push or review, so the live demo is a tour of PRs staged beforehand.
+
+- "Stage the demo": run `scripts/demo-prs/run-demo.sh stage` (Bash `timeout: 600000`; it can take
+  ~20 min, so run it in the background and report as it goes). It resets, waits for Triforce, re-runs
+  failed CI once, pushes the D1 fix, then stops for the human step: tell Josh that Silas
+  (silasjmatson) must approve D1 as Security **with a one-line rationale** (give the D1 URL and the
+  suggested text it prints). Exit 1 means a FAIL line to fix before the demo; quote it.
+  `--skip-reset` keeps the open PRs; `--dry-run` only prints the plan. Staging resets live PRs and
+  spends tokens: run it (other than `--dry-run`) only when Josh asks for it.
+- "Tour" / "walk me through": run `scripts/demo-prs/run-demo.sh tour` (read-only) and relay it: per
+  PR the URL, headline and the line to say, plus any `⚠️` line (a PR not in the state its line needs).
+- Never give D1 its second approval or approve M1, or tell anyone to, except when Josh says it is the
+  live demo moment: either one makes Triforce merge the PR into main.
 
 ## Commands
 
