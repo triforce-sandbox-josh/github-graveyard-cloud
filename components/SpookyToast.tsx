@@ -7,7 +7,7 @@ import { Ghost, SpiderBody } from "./Decor";
 export type Toast = {
   id: number;
   title: string;
-  body: string;
+  body?: string;
   tone?: "ok" | "fail";
 };
 
@@ -72,7 +72,9 @@ export function SpookyToast({
             >
               {toast.title}
             </p>
-            <p className="horror mt-1.5 text-[17px] leading-tight tracking-wider text-bone/75">{toast.body}</p>
+            {toast.body ? (
+              <p className="horror mt-1.5 text-[17px] leading-tight tracking-wider text-bone/75">{toast.body}</p>
+            ) : null}
           </div>
         </div>
       </div>
