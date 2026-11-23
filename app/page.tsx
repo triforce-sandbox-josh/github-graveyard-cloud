@@ -86,7 +86,7 @@ export default function Home() {
         <SpiderNest />
 
         <div className="relative mx-auto flex w-full max-w-4xl flex-col items-center px-4 pt-14 text-center sm:pt-20">
-          <p className="fade-up mb-4 text-center text-base font-semibold text-ink sm:text-lg">Hi team</p>
+          <p className="fade-up mb-4 text-center text-base font-semibold text-ink sm:text-lg">Hi Tyler</p>
 
           <p className="fade-up rounded-full bg-ink px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-peach sm:text-sm">
             A séance for side projects
