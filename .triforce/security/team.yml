@@ -1,6 +1,5 @@
 # Security: auth, privacy and data egress, payments, CI and test integrity.
 team: security
-role: IE
 preset: security
 
 domains:

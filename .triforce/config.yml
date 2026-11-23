@@ -17,16 +17,16 @@ context: >
   vars into the browser bundle. Folders are hints only: route on what a change does.
 
 roles:
-  IE: { about: "Integrity Engineer: security, secrets, data egress, CI and test integrity.", preset: security }
-  SE: { about: "Systems Engineer: architecture, dependencies, build and runtime config.", preset: platform }
+  # Temporary: removed when the graveyard moves to the teams registry (aitriforce-cloud role-harmonization run).
   PXA: { about: "Product Experience Architect: UI, design system, copy and UX.", preset: features }
+  # Temporary: removed when the graveyard moves to the teams registry (aitriforce-cloud role-harmonization run).
   BG: { about: "Brand and graphic design.", preset: design }
 
 people:
-  joshuayoes: { slack: U0CK3LE6S6L, roles: [IE, SE], about: "Sandbox owner; security, CI and dependencies." }
-  trevor-coleman: { roles: [IE], about: "Acting Integrity Engineer for the sandbox test (normally PXA)." }
-  uheron: { slack: U0CHTTB9HFZ, roles: [PXA] }
-  silasjmatson: { slack: U0CJFV80F3P, roles: [IE] }
+  joshuayoes: { slack: U0CK3LE6S6L, about: "Sandbox owner; security, CI and dependencies." }
+  trevor-coleman: { about: "Security, design and legal reviewer for the sandbox." }
+  uheron: { slack: U0CHTTB9HFZ }
+  silasjmatson: { slack: U0CJFV80F3P }
   # Trevor's Slack-only design identity: github: false, so it owns design through role:BG.
   trevor-design: { slack: U0CJB6787JM, github: false, roles: [BG] }
 
@@ -36,9 +36,9 @@ config_owners: [team:platform]
 # Adds to the built-ins (.triforce/**, .github/workflows/**, .github/actions/**, CODEOWNERS).
 always_human:
   paths: [".env*"]
-  owners: [role:IE]
+  owners: [team:security]
 
-fallback_owners: [role:IE]
+fallback_owners: [team:security]
 
 # Global domains. Templates are config.yml-only (SPEC §4.3), so design's and legal's
 # template-based domains live here, owned by those teams.
@@ -112,4 +112,6 @@ rebase:
   strategy: rebase
 
 agents:
+  # Machine account in the security GitHub team; its reviews must never count as a person's.
+  bots: [trevbot-9000]
   branch_prefixes: ["claude/", "codex/", "copilot/"]
