@@ -95,7 +95,7 @@ Look for:
 
 - [ ] The classifier adds `data-privacy-egress`, with a `file:line` reason (not a path match).
 - [ ] High tier.
-- [ ] An IE decision thread from the privacy lens.
+- [ ] A Security decision thread from the privacy lens.
 - [ ] Two people requested, and the second-person row.
 
 Who must act: a Security member approves, twice (high tier), to see the gate pass.

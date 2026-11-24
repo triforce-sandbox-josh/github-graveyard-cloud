@@ -34,6 +34,14 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      # IE and SE are retired: ownership is GitHub teams (see AGENTS.md). PXA joins this list when the
+      # graveyard moves to the teams registry.
+      - name: "Triforce config: no retired roles"
+        run: |
+          if grep -rnE '\b(IE|SE)\b' .triforce/; then
+            echo "::error::Retired roles (IE, SE) found in .triforce/. Use team: owners; see AGENTS.md."
+            exit 1
+          fi
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
