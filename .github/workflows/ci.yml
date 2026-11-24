@@ -34,19 +34,33 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      # IE, SE, PXA and BG are retired: ownership is the GitHub teams declared under teams: (see AGENTS.md).
+      # IE, SE, PXA and BG are retired (in any case): ownership is the GitHub teams declared under teams: (see AGENTS.md).
       # Also rejects the old forms the teams registry replaced: people.<name>.roles, a team file's role:,
       # and requests.role.
       - name: "Triforce config: no retired roles"
         run: |
           failed=0
+          # Upper case anywhere, as a word.
           if grep -rnE '\b(IE|SE|PXA|BG)\b' .triforce/; then
             echo "::error::Retired roles (IE, SE, PXA, BG) found in .triforce/. Use team: owners; see AGENTS.md."
             failed=1
           fi
+          # Any case (ie, Pxa, bg) where a role name goes: on a line with role: or roles: (role:pxa, roles: [bg],
+          # requests.role: ie), or as an entry of a block-style roles: list or map. A whole name only: "-" and "_"
+          # are part of a name, so prose ("per se") and class names ("bg-black") elsewhere pass.
+          if grep -rniE 'roles?[[:space:]]*:(.*[^A-Za-z0-9_-])?(ie|se|pxa|bg)([^A-Za-z0-9_-]|$)' .triforce/ ||
+             awk 'FNR == 1 { r = 0 }
+                  { match($0, /^[[:space:]]*/); ind = RLENGTH }
+                  r && $0 !~ /^[[:space:]]*(#|$)/ && (ind < rind || (ind == rind && $0 !~ /^[[:space:]]*-/)) { r = 0 }
+                  r && tolower($0) ~ /^[[:space:]]*(-[[:space:]]*)?["\047]?(ie|se|pxa|bg)["\047]?[[:space:]]*(:|$)/ { print FILENAME ":" FNR ": " $0; found = 1 }
+                  /^[[:space:]]*roles[[:space:]]*:[[:space:]]*(#.*)?$/ { r = 1; rind = ind }
+                  END { exit !found }' $(find .triforce -name '*.yml' -o -name '*.yaml'); then
+            echo "::error::Retired roles (ie, se, pxa, bg, in any case) found as role names in .triforce/. Use team: owners; see AGENTS.md."
+            failed=1
+          fi
           # people.<name>.roles: a roles key inside the top-level people: block (block or flow style).
           if awk '/^people[[:space:]]*:/ { p = 1; next } /^[^[:space:]#]/ { p = 0 }
-                  p && /(^|[{,[:space:]])roles[[:space:]]*:/ { print FILENAME ":" FNR ": " $0; found = 1 }
+                  p && /(^[[:space:]]*|[{,][[:space:]]*)roles[[:space:]]*:/ { print FILENAME ":" FNR ": " $0; found = 1 }
                   END { exit !found }' .triforce/config.yml; then
             echo "::error::people.<name>.roles found in .triforce/config.yml. People are added to teams now (teams.<team>.also); see AGENTS.md."
             failed=1
@@ -59,7 +73,7 @@ jobs:
           # requests.role: replaced by requests.as (block or flow style).
           if awk '/^requests[[:space:]]*:/ { p = 1; if ($0 ~ /[{,][[:space:]]*role[[:space:]]*:/) { print FILENAME ":" FNR ": " $0; found = 1 }; next }
                   /^[^[:space:]#]/ { p = 0 }
-                  p && /(^|[{,[:space:]])role[[:space:]]*:/ { print FILENAME ":" FNR ": " $0; found = 1 }
+                  p && /(^[[:space:]]*|[{,][[:space:]]*)role[[:space:]]*:/ { print FILENAME ":" FNR ": " $0; found = 1 }
                   END { exit !found }' .triforce/config.yml; then
             echo "::error::requests.role found in .triforce/config.yml. Write requests.as: team:frontend instead; see AGENTS.md."
             failed=1
