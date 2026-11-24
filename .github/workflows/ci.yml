@@ -75,7 +75,7 @@ jobs:
                   /^[^[:space:]#]/ { p = 0 }
                   p && /(^[[:space:]]*|[{,][[:space:]]*)role[[:space:]]*:/ { print FILENAME ":" FNR ": " $0; found = 1 }
                   END { exit !found }' .triforce/config.yml; then
-            echo "::error::requests.role found in .triforce/config.yml. Use a requesters: group and requests.as: slack:frontend (slack:<group>) instead; see AGENTS.md."
+            echo "::error::requests.role found in .triforce/config.yml. Use a requesters: group and requests.as: slack:marketing (slack:<group>) instead; see AGENTS.md."
             failed=1
           fi
           exit "$failed"

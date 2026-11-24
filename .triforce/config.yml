@@ -36,7 +36,7 @@ people:
 # Requester groups: who may start a Slack request, and which domains such a request may change
 # without an up-front stop. A requester group is never a team, owner or approver.
 requesters:
-  frontend:
+  marketing:
     members: [uheron]       # people keys; github: false allowed
     may_change: [shared-ui] # domain ids
 
@@ -75,8 +75,8 @@ domains:
 requests:
   enabled: true
   name: "the Graveyard site"
-  # Slack requests come from the requester group requesters.frontend (see above).
-  as: slack:frontend
+  # Slack requests come from the requester group requesters.marketing (see above).
+  as: slack:marketing
   shipped_note: "It goes out with the next release."
 
 options:

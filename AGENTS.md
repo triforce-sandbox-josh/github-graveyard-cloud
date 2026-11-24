@@ -21,8 +21,8 @@ Owners in `.triforce/` are GitHub teams in the triforce-sandbox-josh org, declar
 - PXA, IE, SE and BG are retired: PXA, IE and SE were second names for frontend, security and platform, and BG
   only gave a Slack-only design identity a way to own design (now the GitHub team `design` alone). Don't add them
   back anywhere (config, docs, PR text, demo scripts); say the team's name ("Security", not "IE").
-- Slack requests come from a requester group: `requesters.frontend` (members `[uheron]`, `may_change: [shared-ui]`)
-  and `requests.as: slack:frontend`. A requester group says who may start a Slack request and which domains such a
+- Slack requests come from a requester group: `requesters.marketing` (members `[uheron]`, `may_change: [shared-ui]`)
+  and `requests.as: slack:marketing`. A requester group says who may start a Slack request and which domains such a
   request may change without an up-front stop; it is never a team, owner or approver. A request that touches any
   other required domain is a stop for that domain's owners (Frontend still reviews the PR), and design's Slack
   domains get a look. Members are `people` keys (`github: false` is allowed); the group grants no review authority.
