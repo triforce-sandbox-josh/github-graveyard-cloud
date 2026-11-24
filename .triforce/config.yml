@@ -35,6 +35,7 @@ people:
 
 # Requester groups: who may start a Slack request, and which domains such a request may change
 # without an up-front stop. A requester group is never a team, owner or approver.
+# The requester's group decides what a request may change, so requests.as is not used.
 requesters:
   marketing:
     members: [uheron]       # people keys; github: false allowed
@@ -75,8 +76,6 @@ domains:
 requests:
   enabled: true
   name: "the Graveyard site"
-  # Slack requests come from the requester group requesters.marketing (see above).
-  as: slack:marketing
   shipped_note: "It goes out with the next release."
 
 options:
