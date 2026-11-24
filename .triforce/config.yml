@@ -23,18 +23,15 @@ teams:
   frontend: {}
   security: {}
   platform: {}
-  # Plus trevor-design, Trevor's Slack-only design identity (no GitHub account).
-  design: { also: [trevor-design] }
+  design: {}
   legal: {}
 
-# Identity only: Slack IDs, and who has no GitHub account. Teams list who is on them.
+# Identity only: Slack IDs and an about line. Teams list who is on them.
 people:
   joshuayoes: { slack: U0CK3LE6S6L, about: "Sandbox owner; security, CI and dependencies." }
-  trevor-coleman: { about: "Security, design and legal reviewer for the sandbox." }
+  trevor-coleman: { slack: U0CJB6787JM, about: "Security, design and legal reviewer for the sandbox." }
   uheron: { slack: U0CHTTB9HFZ }
   silasjmatson: { slack: U0CJFV80F3P }
-  # Trevor's Slack-only design identity: github: false, on team design through teams.design.also.
-  trevor-design: { slack: U0CJB6787JM, github: false }
 
 # Owns this file and approves new team folders.
 config_owners: [team:platform]
@@ -121,6 +118,4 @@ rebase:
   strategy: rebase
 
 agents:
-  # Machine account in the security GitHub team; its reviews must never count as a person's.
-  bots: [trevbot-9000]
   branch_prefixes: ["claude/", "codex/", "copilot/"]
