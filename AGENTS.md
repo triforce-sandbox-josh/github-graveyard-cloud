@@ -21,10 +21,11 @@ Owners in `.triforce/` are GitHub teams in the triforce-sandbox-josh org, declar
 - PXA, IE, SE and BG are retired: PXA, IE and SE were second names for frontend, security and platform, and BG
   only gave a Slack-only design identity a way to own design (now the GitHub team `design` alone). Don't add them
   back anywhere (config, docs, PR text, demo scripts); say the team's name ("Security", not "IE").
-- Slack requests act as Frontend: `requests.as: team:frontend`. A change a request makes only to domains Frontend
-  owns needs no other team's OK before it is built (Frontend still reviews the PR); any other required domain it
-  touches is a stop for that domain's owners, and design's Slack domains get a look. It is a repo setting: whoever
-  asks in Slack, the request carries Frontend's authority, whether or not they are on the team.
+- Slack requests come from a requester group: `requesters.frontend` (members `[uheron]`, `may_change: [shared-ui]`)
+  and `requests.as: slack:frontend`. A requester group says who may start a Slack request and which domains such a
+  request may change without an up-front stop; it is never a team, owner or approver. A request that touches any
+  other required domain is a stop for that domain's owners (Frontend still reviews the PR), and design's Slack
+  domains get a look. Members are `people` keys (`github: false` is allowed); the group grants no review authority.
 - To change who reviews something, change the GitHub team's membership, `teams:` in config.yml, or the domain's
   `team:` owners.
 - CI rejects the retired roles, in any case, and the old forms (`people.<name>.roles`, a team file's `role:`,
