@@ -16,19 +16,25 @@ context: >
   lib/og.tsx renders share cards; components/ is shared UI; next.config.ts maps Firebase env
   vars into the browser bundle. Folders are hints only: route on what a change does.
 
-roles:
-  # Temporary: removed when the graveyard moves to the teams registry (aitriforce-cloud role-harmonization run).
-  PXA: { about: "Product Experience Architect: UI, design system, copy and UX.", preset: features }
-  # Temporary: removed when the graveyard moves to the teams registry (aitriforce-cloud role-harmonization run).
-  BG: { about: "Brand and graphic design.", preset: design }
+# The Triforce teams. Each is the GitHub team of the same name in the triforce-sandbox-josh org:
+# who reviews is that team's membership on GitHub. Every owner here is a team; there are no roles
+# (aitriforce-cloud spec/04 §4A.10 (e)).
+teams:
+  frontend: {}
+  security: {}
+  platform: {}
+  # Plus trevor-design, Trevor's Slack-only design identity (no GitHub account).
+  design: { also: [trevor-design] }
+  legal: {}
 
+# Identity only: Slack IDs, and who has no GitHub account. Teams list who is on them.
 people:
   joshuayoes: { slack: U0CK3LE6S6L, about: "Sandbox owner; security, CI and dependencies." }
   trevor-coleman: { about: "Security, design and legal reviewer for the sandbox." }
   uheron: { slack: U0CHTTB9HFZ }
   silasjmatson: { slack: U0CJFV80F3P }
-  # Trevor's Slack-only design identity: github: false, so it owns design through role:BG.
-  trevor-design: { slack: U0CJB6787JM, github: false, roles: [BG] }
+  # Trevor's Slack-only design identity: github: false, on team design through teams.design.also.
+  trevor-design: { slack: U0CJB6787JM, github: false }
 
 # Owns this file and approves new team folders.
 config_owners: [team:platform]
@@ -59,13 +65,14 @@ domains:
   demo-design:
     uses: ui
     level: advisory
-    owners: [role:BG]
+    owners: [team:design]
 
 # Slack requests (aitriforce-cloud spec/14-slack.md, SL1).
 requests:
   enabled: true
   name: "the Graveyard site"
-  role: PXA
+  # Slack requests act as Frontend, whoever asks: a domain only Frontend owns is not a stop.
+  as: team:frontend
   shipped_note: "It goes out with the next release."
 
 options:

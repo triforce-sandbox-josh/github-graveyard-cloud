@@ -1,4 +1,3 @@
 # Design: what people see. A non-technical reviewer: screenshots and plain language, no code.
 # Its domain, visual-design, uses the ui template, so it lives in config.yml (owned by team:design).
-team: design
 preset: design
