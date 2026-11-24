@@ -34,14 +34,37 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      # IE and SE are retired: ownership is GitHub teams (see AGENTS.md). PXA joins this list when the
-      # graveyard moves to the teams registry.
+      # IE, SE, PXA and BG are retired: ownership is the GitHub teams declared under teams: (see AGENTS.md).
+      # Also rejects the old forms the teams registry replaced: people.<name>.roles, a team file's role:,
+      # and requests.role.
       - name: "Triforce config: no retired roles"
         run: |
-          if grep -rnE '\b(IE|SE)\b' .triforce/; then
-            echo "::error::Retired roles (IE, SE) found in .triforce/. Use team: owners; see AGENTS.md."
-            exit 1
+          failed=0
+          if grep -rnE '\b(IE|SE|PXA|BG)\b' .triforce/; then
+            echo "::error::Retired roles (IE, SE, PXA, BG) found in .triforce/. Use team: owners; see AGENTS.md."
+            failed=1
           fi
+          # people.<name>.roles: a roles key inside the top-level people: block (block or flow style).
+          if awk '/^people[[:space:]]*:/ { p = 1; next } /^[^[:space:]#]/ { p = 0 }
+                  p && /(^|[{,[:space:]])roles[[:space:]]*:/ { print FILENAME ":" FNR ": " $0; found = 1 }
+                  END { exit !found }' .triforce/config.yml; then
+            echo "::error::people.<name>.roles found in .triforce/config.yml. People are added to teams now (teams.<team>.also); see AGENTS.md."
+            failed=1
+          fi
+          # A team file's role: (a team no longer wears a role).
+          if grep -nE '^role[[:space:]]*:' .triforce/*/team.yml; then
+            echo "::error::role: found in a team file. A team no longer wears a role: delete the line; see AGENTS.md."
+            failed=1
+          fi
+          # requests.role: replaced by requests.as (block or flow style).
+          if awk '/^requests[[:space:]]*:/ { p = 1; if ($0 ~ /[{,][[:space:]]*role[[:space:]]*:/) { print FILENAME ":" FNR ": " $0; found = 1 }; next }
+                  /^[^[:space:]#]/ { p = 0 }
+                  p && /(^|[{,[:space:]])role[[:space:]]*:/ { print FILENAME ":" FNR ": " $0; found = 1 }
+                  END { exit !found }' .triforce/config.yml; then
+            echo "::error::requests.role found in .triforce/config.yml. Write requests.as: team:frontend instead; see AGENTS.md."
+            failed=1
+          fi
+          exit "$failed"
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
