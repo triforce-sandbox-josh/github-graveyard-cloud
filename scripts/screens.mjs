@@ -1,5 +1,5 @@
 // Renders the app at the PR base and head with GitHub mocked, and writes before/after screenshots
-// plus a manifest for Triforce's design review (artifact "triforce-screens").
+// plus a manifest for Allforce's design review (artifact "allforce-screens").
 // Usage: node scripts/screens.mjs <base-dir> <head-dir> <out-dir> <head-sha>
 // Each dir is a checkout that has already been through `npm run build`. Each is served with
 // `next start`, with GRAVEYARD_GITHUB_API_URL pointing at scripts/mock-github.mjs.

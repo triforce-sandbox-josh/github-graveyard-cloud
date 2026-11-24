@@ -11,7 +11,7 @@ slice's demo by hand. Nothing here runs by itself: the PR that adds these script
   that is already open, so re-running never opens a second). It never pushes to `main`, and returns
   you to the branch you started on.
 - Each PR is titled `[demo D1] ...`, `[demo D2] ...`, `[demo A1] ...`.
-- Running the scripts makes the live Triforce service evaluate the PRs, which spends model tokens.
+- Running the scripts makes the live Allforce service evaluate the PRs, which spends model tokens.
 - Close or merge a demo PR before re-running its script if you want a fresh PR rather than an update.
 
 Two accounts are needed: the **author** (runs the scripts) and, for the Security steps, a **second
@@ -35,7 +35,7 @@ Then run `d1-fix.sh` (pushes the fix to the same branch) and look for:
 - [ ] A decision thread from the privacy lens.
 - [ ] Two people requested, and the second-person row.
 
-Whether the AI reviewers raise anything else (for example, the privacy lens's point as a defect rather than a decision, or that `trackShare` runs alongside ShareBar's existing `share` event) is model judgement. A second defect thread means the planted code needs another look, not that Triforce miscounted. The privacy-lens decision check may not appear when nothing is left to decide.
+Whether the AI reviewers raise anything else (for example, the privacy lens's point as a defect rather than a decision, or that `trackShare` runs alongside ShareBar's existing `share` event) is model judgement. A second defect thread means the planted code needs another look, not that Allforce miscounted. The privacy-lens decision check may not appear when nothing is left to decide.
 
 Who must act: the second account approves (twice, for a high-tier PR) to see the gate pass.
 
@@ -50,7 +50,7 @@ from the bot account's checkout.
 Note: "Waiting on @prompter" and the prompter ping need a Bot-authored PR with a defect, which this
 script does not produce. The D2 tag-in part (the checks below other than the prompter one) still demos.
 The prompter behaviour is proven by tests (`packages/worker/test/review/feedback.test.ts`, S2.9, in
-aitriforce-cloud).
+aiallforce-cloud).
 
 Look for:
 
