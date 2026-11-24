@@ -27,5 +27,6 @@ Owners in `.triforce/` are GitHub teams in the triforce-sandbox-josh org, declar
   asks in Slack, the request carries Frontend's authority, whether or not they are on the team.
 - To change who reviews something, change the GitHub team's membership, `teams:` in config.yml, or the domain's
   `team:` owners.
-- CI rejects the retired roles and the old forms (`people.<name>.roles`, a team file's `role:`, `requests.role`).
+- CI rejects the retired roles, in any case, and the old forms (`people.<name>.roles`, a team file's `role:`,
+  `requests.role`).
 - If a Triforce doc, example or error message tells you to add PXA, IE, SE or BG, it's out of date: stop and ask.
