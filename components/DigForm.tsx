@@ -6,6 +6,7 @@ import { AppIcon } from "./Decor";
 import { StableLabel } from "./StableLabel";
 import { startDig } from "./DigOverlay";
 import { track } from "@/lib/analytics";
+import { dig } from "@/lib/dig-client";
 import { xHandleFor } from "@/lib/devs";
 
 const USERNAME_RE = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
@@ -51,12 +52,7 @@ export function DigForm({
     }
     track("dig_graveyard", { login: login.toLowerCase(), form: variant, featured: !!xHandleFor(login) });
     // Count the dig (fire-and-forget; keepalive survives the navigation).
-    fetch("/api/dig", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ login }),
-      keepalive: true,
-    }).catch(() => {});
+    void dig(login);
     startDig(login);
     startTransition(() => router.push(`/${login}`));
   }

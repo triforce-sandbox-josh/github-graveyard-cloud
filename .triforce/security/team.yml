@@ -100,4 +100,4 @@ boundaries:
     forbid_imports: ["@/lib/digs", "firebase-admin"]
     message: Client components can't import server-only modules. Call POST /api/dig instead.
     why: firebase-admin and the service account must never reach the browser bundle.
-    facade: ["app/api/dig/route.ts"]
+    facade: ["app/api/dig/route.ts", "lib/dig-client.ts"]
