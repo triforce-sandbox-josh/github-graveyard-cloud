@@ -1,5 +1,4 @@
 # Platform: dependencies, build and runtime config. Also owns .triforce/config.yml (config_owners).
-team: platform
 preset: platform
 
 domains:

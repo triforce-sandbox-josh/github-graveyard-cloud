@@ -10,13 +10,25 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Triforce ownership: teams and roles
 
-Owners in `.triforce/` are GitHub teams in the triforce-sandbox-josh org (`team:frontend`, `team:security`,
-`team:platform`, `team:design`, `team:legal`). Use `team:` owner references.
-- A role is a group of people that is NOT a GitHub team: a subset of a team, people from several teams, or
-  people without GitHub accounts. If a role would hold the same people as a team, use the team instead.
-- A role always names its members. A team never wears a role as a whole (no `role:` in a team.yml).
-- PXA, IE and SE are retired: they were second names for frontend, security and platform. Don't add them back
-  anywhere (config, docs, PR text, demo scripts); say the team's name ("Security", not "IE"). PXA is still in
-  `requests.role` and `frontend/team.yml` until Triforce supports `requests.as`; don't add it anywhere else.
-- To change who reviews something, change the GitHub team's membership or the domain's `team:` owners.
-- If a Triforce doc, example or error message tells you to add PXA, IE or SE, it's out of date: stop and ask.
+Owners in `.triforce/` are GitHub teams in the triforce-sandbox-josh org, declared under `teams:` in
+`.triforce/config.yml` (`frontend`, `security`, `platform`, `design`, `legal`). Use `team:` owner references.
+- Each `.triforce/<team>/` folder belongs to the team it is named for; a `team.yml` has no `team:` or `role:` key.
+- `people` entries are identity only (Slack IDs, `about`); they never list roles. Trevor is one person,
+  `trevor-coleman`, with his Slack ID: there is no separate Slack-only identity for design.
+- This repo has no roles. A role is a group of people that is NOT a GitHub team: a subset of a team, people from
+  several teams, or people without GitHub accounts. If a role would hold the same people as a team, use the team.
+  A role always lists its members; a team never wears a role.
+- PXA, IE, SE and BG are retired: PXA, IE and SE were second names for frontend, security and platform, and BG
+  only gave a Slack-only design identity a way to own design (now the GitHub team `design` alone). Don't add them
+  back anywhere (config, docs, PR text, demo scripts); say the team's name ("Security", not "IE").
+- Slack requests are governed by a requester group: `requesters.marketing` (members `[uheron]`,
+  `may_change: [shared-ui]`). The group is chosen by who asks, so there is no `requests.as`; don't add it. A requester
+  group says who may start a Slack request and which domains such a request may change without an up-front stop; it
+  is never a team, owner or approver. A request that touches any other required domain is a stop for that domain's
+  owners (Frontend still reviews the PR), and design's Slack domains get a look. Members are `people` keys
+  (`github: false` is allowed); the group grants no review authority.
+- To change who reviews something, change the GitHub team's membership, `teams:` in config.yml, or the domain's
+  `team:` owners.
+- CI rejects the retired roles, in any case, and the old forms (`people.<name>.roles`, a team file's `role:`,
+  `requests.role`).
+- If a Triforce doc, example or error message tells you to add PXA, IE, SE or BG, it's out of date: stop and ask.

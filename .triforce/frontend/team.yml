@@ -1,7 +1,6 @@
 # Frontend: shared UI, copy and UX.
-team: frontend
-role: PXA
 preset: features
+title: Frontend
 
 domains:
   shared-ui:

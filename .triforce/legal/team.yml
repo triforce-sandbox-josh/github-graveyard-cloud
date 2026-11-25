@@ -1,5 +1,4 @@
 # Legal: compliance. Plain-language questions that cite our standards (./standards).
-team: legal
 preset: legal
 required_when_flagged: true      # if any review flags a compliance question, legal must approve that PR
 
