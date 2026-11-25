@@ -23,8 +23,10 @@ teams:
   frontend: {}
   security: {}
   platform: {}
-  design: {}
-  legal: {}
+  # Design and Legal each have one GitHub member (trevor-coleman), so his own PRs touching their
+  # folders could never be approved. A second owner each, picked at random from the repo's people.
+  design: { also: [coolsoftwaretyler] }
+  legal: { also: [markrickert] }
 
 # Identity only: Slack IDs and an about line. Teams list who is on them.
 people:
