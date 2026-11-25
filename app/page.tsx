@@ -80,6 +80,9 @@ const SPECIMENS: Grave[] = [
 export default function Home() {
   return (
     <main className="flex flex-1 flex-col">
+      <div role="note" className="w-full bg-ink px-4 py-2 text-center text-sm font-bold tracking-wide text-peach break-words">
+        testing new triforce bot
+      </div>
       <section className="dusk grain overflow-hidden pb-28 sm:pb-36">
         <TopBar home />
         <HangingSpider className="right-[12%] top-0 hidden w-[78px] sm:block" style={{ height: "clamp(150px, 26vh, 260px)" }} />
