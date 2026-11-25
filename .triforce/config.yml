@@ -45,8 +45,10 @@ requesters:
 config_owners: [team:platform]
 
 # Adds to the built-ins (.triforce/**, .github/workflows/**, .github/actions/**, CODEOWNERS).
+# .github/** covers every GitHub file (dependabot.yml, PR and issue templates, ...), not only the
+# built-in workflows, actions and CODEOWNERS (D-0160).
 always_human:
-  paths: [".env*"]
+  paths: [".env*", ".github/**"]
   owners: [team:security]
 
 fallback_owners: [team:security]
